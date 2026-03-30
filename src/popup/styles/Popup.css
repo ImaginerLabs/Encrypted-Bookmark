@@ -1,0 +1,110 @@
+/* Popup 主容器样式 */
+
+.popup-container {
+  width: 400px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+}
+
+/* 顶部搜索栏 */
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.btn-quick-add {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 4px;
+  background: #1976d2;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-quick-add:hover {
+  background: #1565c0;
+}
+
+.btn-quick-add:active {
+  background: #0d47a1;
+}
+
+/* 主体内容区 */
+.popup-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* 底部状态栏 */
+.popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.bookmark-count {
+  font-size: 13px;
+  color: #666;
+}
+
+.btn-lock {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background: #f44336;
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-lock:hover {
+  background: #d32f2f;
+}
+
+/* Toast 提示 */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  padding: 12px 24px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 10000;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* 搜索高亮 */
+mark {
+  background: #ffeb3b;
+  color: #000000;
+  padding: 0 2px;
+  border-radius: 2px;
+}

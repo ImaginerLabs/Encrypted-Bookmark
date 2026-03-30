@@ -1,0 +1,26 @@
+/* 文件夹列表样式 */
+
+.folder-list {
+  width: 150px;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+  background: #fafafa;
+}
+
+/* 滚动条样式 */
+.folder-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.folder-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.folder-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.folder-list::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
