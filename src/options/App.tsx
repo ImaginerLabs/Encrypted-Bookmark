@@ -3,6 +3,7 @@ import Sidebar, { SettingsTab } from './components/Sidebar';
 import BasicSettingsPanel from './components/BasicSettingsPanel';
 import SecuritySettingsPanel from './components/SecuritySettingsPanel';
 import StorageSettingsPanel from './components/StorageSettingsPanel';
+import ImportExportPanel from './components/ImportExportPanel';
 import AboutPanel from './components/AboutPanel';
 import './App.css';
 
@@ -31,6 +32,8 @@ const App: React.FC = () => {
         return <SecuritySettingsPanel onMessage={showMessage} />;
       case 'storage':
         return <StorageSettingsPanel onMessage={showMessage} />;
+      case 'import-export':
+        return <ImportExportPanel onMessage={showMessage} />;
       case 'about':
         return <AboutPanel onMessage={showMessage} />;
       default:

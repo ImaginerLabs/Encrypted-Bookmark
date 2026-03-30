@@ -3,9 +3,11 @@ import type { EncryptedData } from '@/types/data';
 import type { IStorageAdapter, StorageCapacityInfo } from '../interfaces/IStorageAdapter';
 
 /**
- * Chrome Storage 存储键名
+ * Chrome Storage 默认存储键名
  */
-const STORAGE_KEY = 'encrypted_bookmarks_data';
+const DEFAULT_STORAGE_KEY = 'encrypted_bookmarks_data';
+const FOLDERS_STORAGE_KEY = 'encrypted_folders_data';
+const TAGS_STORAGE_KEY = 'encrypted_tags_data';
 
 /**
  * Chrome Storage 容量限制配置
@@ -28,8 +30,49 @@ const CHROME_STORAGE_LIMITS = {
  * - 自动容量检测
  * - 写入前空间校验
  * - 完整的错误处理
+ * - 支持自定义存储键
  */
 export class ChromeStorageAdapter implements IStorageAdapter {
+  private storageKey: string;
+  private static instances: Map<string, ChromeStorageAdapter> = new Map();
+
+  /**
+   * 构造函数
+   * @param storageKey 存储键名，默认为书签数据键
+   */
+  constructor(storageKey: string = DEFAULT_STORAGE_KEY) {
+    this.storageKey = storageKey;
+  }
+
+  /**
+   * 获取单例实例（书签数据）
+   */
+  static getInstance(): ChromeStorageAdapter {
+    if (!this.instances.has(DEFAULT_STORAGE_KEY)) {
+      this.instances.set(DEFAULT_STORAGE_KEY, new ChromeStorageAdapter(DEFAULT_STORAGE_KEY));
+    }
+    return this.instances.get(DEFAULT_STORAGE_KEY)!;
+  }
+
+  /**
+   * 获取文件夹存储适配器实例
+   */
+  static getFolderInstance(): ChromeStorageAdapter {
+    if (!this.instances.has(FOLDERS_STORAGE_KEY)) {
+      this.instances.set(FOLDERS_STORAGE_KEY, new ChromeStorageAdapter(FOLDERS_STORAGE_KEY));
+    }
+    return this.instances.get(FOLDERS_STORAGE_KEY)!;
+  }
+
+  /**
+   * 获取标签存储适配器实例
+   */
+  static getTagInstance(): ChromeStorageAdapter {
+    if (!this.instances.has(TAGS_STORAGE_KEY)) {
+      this.instances.set(TAGS_STORAGE_KEY, new ChromeStorageAdapter(TAGS_STORAGE_KEY));
+    }
+    return this.instances.get(TAGS_STORAGE_KEY)!;
+  }
   /**
    * 读取加密数据
    */
@@ -40,8 +83,8 @@ export class ChromeStorageAdapter implements IStorageAdapter {
         throw new StorageError('Chrome Storage API 不可用');
       }
 
-      const result = await chrome.storage.local.get(STORAGE_KEY);
-      const data = result[STORAGE_KEY];
+      const result = await chrome.storage.local.get(this.storageKey);
+      const data = result[this.storageKey];
 
       if (!data) {
         return null;
@@ -103,7 +146,7 @@ export class ChromeStorageAdapter implements IStorageAdapter {
       }
 
       // 执行写入
-      await chrome.storage.local.set({ [STORAGE_KEY]: data });
+      await chrome.storage.local.set({ [this.storageKey]: data });
 
     } catch (error) {
       if (error instanceof StorageError) {
@@ -122,7 +165,7 @@ export class ChromeStorageAdapter implements IStorageAdapter {
         throw new StorageError('Chrome Storage API 不可用');
       }
 
-      await chrome.storage.local.remove(STORAGE_KEY);
+      await chrome.storage.local.remove(this.storageKey);
     } catch (error) {
       throw new StorageError('清空存储数据失败', { originalError: error });
     }
@@ -138,7 +181,7 @@ export class ChromeStorageAdapter implements IStorageAdapter {
       }
 
       // 获取当前使用量（字节）
-      const bytesInUse = await chrome.storage.local.getBytesInUse(STORAGE_KEY);
+      const bytesInUse = await chrome.storage.local.getBytesInUse(this.storageKey);
 
       const usagePercent = (bytesInUse / CHROME_STORAGE_LIMITS.MAX_BYTES) * 100;
 

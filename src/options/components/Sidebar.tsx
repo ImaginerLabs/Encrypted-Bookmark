@@ -1,7 +1,7 @@
 import React from 'react';
 import './Sidebar.css';
 
-export type SettingsTab = 'basic' | 'security' | 'storage' | 'about';
+export type SettingsTab = 'basic' | 'security' | 'storage' | 'import-export' | 'about';
 
 interface SidebarProps {
   activeTab: SettingsTab;
@@ -16,6 +16,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
     { id: 'basic', icon: '⚙️', label: '基本设置' },
     { id: 'security', icon: '🔒', label: '安全设置' },
     { id: 'storage', icon: '💾', label: '存储设置' },
+    { id: 'import-export', icon: '🔄', label: '导入导出' },
     { id: 'about', icon: 'ℹ️', label: '关于' }
   ];
 
