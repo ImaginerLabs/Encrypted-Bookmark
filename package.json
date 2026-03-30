@@ -1,5 +1,5 @@
 {
-  "name": "private-bookmark",
+  "name": "encrypted-bookmark",
   "version": "1.0.0",
   "description": "Local-first, privacy-focused bookmark manager with encryption",
   "type": "module",
