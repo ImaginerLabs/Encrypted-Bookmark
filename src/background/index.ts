@@ -5,7 +5,7 @@ import { PasswordService } from '@/services';
  * 负责处理后台任务和消息通信
  */
 
-console.log('Private BookMark - Background Service Worker Started');
+console.log('Encrypted Bookmark - Background Service Worker Started');
 
 // 插件安装时初始化
 chrome.runtime.onInstalled.addListener((details) => {

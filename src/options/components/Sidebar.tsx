@@ -23,7 +23,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   return (
     <aside className="settings-sidebar">
       <div className="sidebar-header">
-        <h2>🔐 Private BookMark</h2>
+        <h2>🔐 Encrypted Bookmark</h2>
         <p className="version">v1.0.0</p>
       </div>
       <nav className="sidebar-nav">

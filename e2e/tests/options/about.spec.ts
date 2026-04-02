@@ -17,7 +17,7 @@ test.describe('Options - 关于面板', () => {
     await optionsPage.waitForLoadState('domcontentloaded');
     await clickAboutTab(optionsPage);
 
-    await expect(optionsPage.locator('.app-name')).toContainText('Private BookMark');
+    await expect(optionsPage.locator('.app-name')).toContainText('Encrypted Bookmark');
     await expect(optionsPage.locator('.app-version')).toContainText('版本');
     await expect(optionsPage.locator('.app-version')).toContainText('1.0.0');
   });

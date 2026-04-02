@@ -108,7 +108,7 @@ const App: React.FC = () => {
     return (
       <div className="app">
         <div className="header">
-          <h1>🔐 Private BookMark</h1>
+          <h1>🔐 Encrypted Bookmark</h1>
           <p>首次使用，请设置主密码</p>
         </div>
         <form onSubmit={handleSetPassword} className="form">
@@ -171,7 +171,7 @@ const App: React.FC = () => {
   return (
     <div className="app">
       <div className="header">
-        <h1>🔐 Private BookMark</h1>
+        <h1>🔐 Encrypted Bookmark</h1>
         <p>请输入主密码解锁</p>
       </div>
       <form onSubmit={handleUnlock} className="form">

@@ -982,4 +982,4 @@ const json = JSON.stringify(backup, null, 2);
 
 **文档版本**: V1.0  
 **最后更新**: 2025-03-29  
-**维护者**: PrivateBookMark Team
+**维护者**: Encrypted Bookmark Team

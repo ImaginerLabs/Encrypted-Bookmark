@@ -684,5 +684,5 @@ const isValid = await migrator.verifyConsistency(storage1, storage2);
 
 ---
 
-**维护者**: PrivateBookMark Team  
+**维护者**: Encrypted Bookmark Team
 **最后更新**: 2024-03-29

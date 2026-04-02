@@ -20,7 +20,7 @@ test.describe('Popup - 密码设置', () => {
 
   test('首次使用显示设置密码界面', async ({ popupPage }) => {
     // 验证标题
-    await expect(popupPage.locator('.header h1')).toContainText('Private BookMark');
+    await expect(popupPage.locator('.header h1')).toContainText('Encrypted Bookmark');
 
     // 验证显示首次使用提示
     await expect(popupPage.locator('.header')).toContainText('首次使用');

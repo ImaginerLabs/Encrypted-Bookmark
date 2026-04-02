@@ -450,9 +450,9 @@ async function selectStorage(dataSize: number) {
 ## 📞 联系方式
 
 如有问题或建议，请联系:
-- **项目**: PrivateBookMark
-- **文档**: [GitHub Repository](https://github.com/your-repo/private-bookmark)
-- **邮件**: team@privatebookmark.com
+- **项目**: Encrypted Bookmark
+- **文档**: [GitHub Repository](https://github.com/your-repo/Encrypted-Bookmark)
+- **邮件**: team@encrypted-bookmark.com
 
 ---
 

@@ -51,7 +51,7 @@ const AboutPanel: React.FC<AboutPanelProps> = ({ onMessage }) => {
       <div className="about-content">
         <div className="app-icon">🔐</div>
         
-        <h2 className="app-name">Private BookMark</h2>
+        <h2 className="app-name">Encrypted Bookmark</h2>
         <p className="app-version">版本 {version}</p>
         <p className="app-tagline">本地优先、隐私至上的书签管理工具</p>
 
