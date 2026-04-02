@@ -6,6 +6,7 @@ import {
   InvalidPasswordError,
   AccountLockedError
 } from '@/types';
+import { Popup } from './Popup';
 import './App.css';
 
 /**
@@ -94,13 +95,6 @@ const App: React.FC = () => {
     }
   };
 
-  // 锁定
-  const handleLock = () => {
-    PasswordService.lock();
-    setPassword('');
-    checkUnlockStatus();
-  };
-
   if (!status) {
     return (
       <div className="app">
@@ -168,23 +162,9 @@ const App: React.FC = () => {
     );
   }
 
-  // 已解锁
+  // 已解锁 → 渲染书签管理界面
   if (isUnlocked) {
-    return (
-      <div className="app">
-        <div className="header">
-          <h1>✅ 已解锁</h1>
-          <p>Welcome to Private BookMark</p>
-        </div>
-        <div className="unlocked-content">
-          <p>🎉 插件已成功解锁</p>
-          <p className="info">后续 Task 将实现书签管理功能</p>
-          <button onClick={handleLock} className="btn btn-secondary">
-            锁定
-          </button>
-        </div>
-      </div>
-    );
+    return <Popup />;
   }
 
   // 需要解锁

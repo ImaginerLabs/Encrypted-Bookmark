@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { PasswordService } from '@/services';
+import { InvalidPasswordError, AccountLockedError } from '@/types';
 import ImportSection from './ImportSection';
 import ExportSection from './ExportSection';
 import './SettingsPanel.css';
@@ -13,18 +15,45 @@ interface ImportExportPanelProps {
  */
 const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
   const [masterKey, setMasterKey] = useState<string>('');
+  const [unlockPassword, setUnlockPassword] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
 
   // 获取 masterKey
   useEffect(() => {
     const key = sessionStorage.getItem('masterKey');
     if (key) {
       setMasterKey(key);
-    } else {
-      onMessage('未解锁，请先登录', 'error');
     }
-  }, [onMessage]);
+  }, []);
 
-  // 如果没有 masterKey，不渲染导入导出组件
+  // 解锁
+  const handleUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUnlockError('');
+    setUnlocking(true);
+
+    try {
+      await PasswordService.verifyMasterPassword(unlockPassword);
+      setUnlockPassword('');
+      // 同步到 sessionStorage
+      try { sessionStorage.setItem('masterKey', unlockPassword); } catch { /* ignore */ }
+      setMasterKey(unlockPassword);
+    } catch (err) {
+      if (err instanceof InvalidPasswordError) {
+        setUnlockError(`密码错误，剩余尝试次数：${err.remainingAttempts}`);
+      } else if (err instanceof AccountLockedError) {
+        const seconds = Math.ceil((err.lockedUntil - Date.now()) / 1000);
+        setUnlockError(`账户已锁定，请在 ${seconds} 秒后重试`);
+      } else {
+        setUnlockError(err instanceof Error ? err.message : '解锁失败');
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  // 如果没有 masterKey，显示解锁表单
   if (!masterKey) {
     return (
       <div className="settings-panel">
@@ -36,6 +65,24 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
           <div className="info-box">
             <p>⚠️ 请先登录后再使用导入导出功能</p>
           </div>
+          <form onSubmit={handleUnlock} className="unlock-form" style={{ marginTop: 16 }}>
+            <div className="form-group">
+              <label htmlFor="options-unlock-password">主密码</label>
+              <input
+                id="options-unlock-password"
+                type="password"
+                placeholder="输入密码"
+                value={unlockPassword}
+                onChange={(e) => setUnlockPassword(e.target.value)}
+                disabled={unlocking}
+                autoFocus
+              />
+            </div>
+            {unlockError && <div className="error">{unlockError}</div>}
+            <button type="submit" className="btn btn-primary" disabled={unlocking || !unlockPassword}>
+              {unlocking ? '验证中...' : '解锁'}
+            </button>
+          </form>
         </div>
       </div>
     );

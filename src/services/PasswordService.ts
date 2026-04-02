@@ -183,6 +183,8 @@ export class PasswordService {
 
     // 缓存到内存
     this.masterKey = password;
+    // 同步到 sessionStorage，供 Popup 等组件使用（仅页面上下文可用）
+    try { sessionStorage.setItem('masterKey', password); } catch { /* service worker 无 sessionStorage */ }
   }
 
   /**
@@ -213,6 +215,7 @@ export class PasswordService {
     if (isValid) {
       // 验证成功：缓存密钥并重置失败次数
       this.masterKey = password;
+      try { sessionStorage.setItem('masterKey', password); } catch { /* service worker 无 sessionStorage */ }
       await this.resetFailedAttempts();
       return true;
     } else {
@@ -250,6 +253,7 @@ export class PasswordService {
    */
   static lock(): void {
     this.masterKey = null;
+    try { sessionStorage.removeItem('masterKey'); } catch { /* service worker 无 sessionStorage */ }
   }
 
   /**
