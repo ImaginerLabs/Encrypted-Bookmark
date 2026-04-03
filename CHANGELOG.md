@@ -6,6 +6,18 @@
 
 ---
 
+## [1.2.0] - 2026-04-03
+
+### Changed
+- 优化 Options 页面分割线：移除 `.settings-section` 冗余 `border-bottom`，`.panel-actions` 和 `.section-divider` 颜色降级为 `#F3F4F6`，移除 `.sidebar-header` 冗余分割线
+- 优化 Popup 弹窗分割线：标题栏、搜索栏、底部栏的硬分割线替换为轻量 `box-shadow`，侧边栏分割线颜色降级
+- 重构 Options 详情页布局：侧边栏从 `position: fixed` 改为 `sticky`，内容区改为 Flex 自适应布局
+- Options 面板宽度自适应：使用 `clamp()` 和 `min()` 实现渐进增强的响应式宽度
+- Options 垂直高度自适应：内容区支持自然撑开和滚动
+- 完善响应式断点：新增 1024px 中等屏幕断点，优化 768px 以下移动端适配
+
+---
+
 ## [1.1.0] - 2026-04-03
 
 ### Added

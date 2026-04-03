@@ -10,7 +10,7 @@
 
 .options-content {
   flex: 1;
-  margin-left: 240px;
+  min-width: 0;
   min-height: 100vh;
   overflow-y: auto;
 }
@@ -67,9 +67,18 @@
 
 /* 响应式设计 */
 
+/* 中等屏幕断点 */
+@media (max-width: 1024px) {
+  .options-content {
+    margin-left: 0; /* 兼容旧值清除 */
+  }
+}
+
+/* 小屏幕断点 */
 @media (max-width: 768px) {
   .options-content {
     margin-left: 0;
+    width: 100%;
   }
 
   .settings-sidebar {
