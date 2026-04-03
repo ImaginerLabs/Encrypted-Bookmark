@@ -20,6 +20,8 @@ export interface Bookmark {
   updateTime: number;
   /** 访问次数 */
   visitCount?: number;
+  /** 是否标记为"稍后再读" */
+  isReadLater?: boolean;
 }
 
 /**

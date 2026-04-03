@@ -1,4 +1,4 @@
-import type { Bookmark, Folder } from './data';
+import type { Bookmark, Folder } from "./data";
 
 /**
  * 书签业务层类型定义
@@ -37,14 +37,16 @@ export interface BookmarkFilter {
   searchText?: string;
   /** 是否包含已删除书签 */
   includeDeleted?: boolean;
+  /** 筛选"稍后再读"书签 */
+  isReadLater?: boolean;
   /** 分页 - 每页数量 */
   limit?: number;
   /** 分页 - 偏移量 */
   offset?: number;
   /** 排序字段 */
-  sortBy?: 'createTime' | 'updateTime' | 'title' | 'visitCount';
+  sortBy?: "createTime" | "updateTime" | "title" | "visitCount";
   /** 排序方向 */
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 /**
@@ -61,6 +63,8 @@ export interface AddBookmarkInput {
   tags?: string[];
   /** 备注信息（可选） */
   note?: string;
+  /** 是否标记为"稍后再读" */
+  isReadLater?: boolean;
 }
 
 /**
@@ -104,19 +108,26 @@ export interface AddTagInput {
 /**
  * 标签预设颜色枚举
  */
-export type TagColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange' | 'pink';
+export type TagColor =
+  | "red"
+  | "blue"
+  | "green"
+  | "yellow"
+  | "purple"
+  | "orange"
+  | "pink";
 
 /**
  * 标签颜色映射（HEX值）
  */
 export const TAG_COLOR_MAP: Record<TagColor, string> = {
-  red: '#F44336',
-  blue: '#2196F3',
-  green: '#4CAF50',
-  yellow: '#FFEB3B',
-  purple: '#9C27B0',
-  orange: '#FF9800',
-  pink: '#E91E63'
+  red: "#F44336",
+  blue: "#2196F3",
+  green: "#4CAF50",
+  yellow: "#FFEB3B",
+  purple: "#9C27B0",
+  orange: "#FF9800",
+  pink: "#E91E63",
 };
 
 /**
@@ -188,8 +199,8 @@ export interface BookmarkStats {
 /**
  * 默认常量
  */
-export const DEFAULT_FOLDER_ID = 'uncategorized';
-export const DEFAULT_FOLDER_NAME = '未分类';
+export const DEFAULT_FOLDER_ID = "uncategorized";
+export const DEFAULT_FOLDER_NAME = "未分类";
 export const UNDO_TIMEOUT_MS = 5000; // 撤销超时时间：5秒
 export const MAX_TITLE_LENGTH = 200;
 export const MIN_TITLE_LENGTH = 1;

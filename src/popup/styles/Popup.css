@@ -75,14 +75,40 @@
   border-radius: 8px;
   background: #4F46E5;
   color: #ffffff;
-  font-size: 22px;
-  line-height: 1;
   cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  font-size: 0;  /* 隐藏文本，改用伪元素绘制 */
+}
+
+.btn-quick-add::before,
+.btn-quick-add::after {
+  content: '';
+  position: absolute;
+  background: #ffffff;
+  border-radius: 1px;
+}
+
+/* 横线 */
+.btn-quick-add::before {
+  width: 16px;
+  height: 2px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 竖线 */
+.btn-quick-add::after {
+  width: 2px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .btn-quick-add:hover {

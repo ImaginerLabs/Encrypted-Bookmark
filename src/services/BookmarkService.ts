@@ -1,6 +1,6 @@
-import type { IStorageAdapter } from '@/storage/interfaces/IStorageAdapter';
-import { EncryptionService } from './EncryptionService';
-import type { Bookmark } from '@/types/data';
+import type { IStorageAdapter } from "@/storage/interfaces/IStorageAdapter";
+import { EncryptionService } from "./EncryptionService";
+import type { Bookmark } from "@/types/data";
 import type {
   BookmarkWithDeletion,
   AddBookmarkInput,
@@ -8,15 +8,15 @@ import type {
   BookmarkFilter,
   Result,
   UndoDeleteInfo,
-  ValidationError
-} from '@/types/bookmark';
+  ValidationError,
+} from "@/types/bookmark";
 import {
   MAX_TITLE_LENGTH,
   MIN_TITLE_LENGTH,
   DEFAULT_FOLDER_ID,
-  UNDO_TIMEOUT_MS
-} from '@/types/bookmark';
-import { StorageError, DataCorruptionError } from '@/types/errors';
+  UNDO_TIMEOUT_MS,
+} from "@/types/bookmark";
+import { StorageError, DataCorruptionError } from "@/types/errors";
 
 /**
  * 书签服务
@@ -47,7 +47,7 @@ export class BookmarkService {
   clearMasterKey(): void {
     this.masterKey = null;
     // 清除所有删除定时器
-    this.deleteTimers.forEach(timer => clearTimeout(timer));
+    this.deleteTimers.forEach((timer) => clearTimeout(timer));
     this.deleteTimers.clear();
   }
 
@@ -56,7 +56,7 @@ export class BookmarkService {
    */
   private ensureUnlocked(): void {
     if (!this.masterKey) {
-      throw new StorageError('应用未解锁，请先输入密码');
+      throw new StorageError("应用未解锁，请先输入密码");
     }
   }
 
@@ -72,22 +72,30 @@ export class BookmarkService {
     }
 
     try {
-      const decrypted = await EncryptionService.decrypt(encryptedData, this.masterKey!);
+      const decrypted = await EncryptionService.decrypt(
+        encryptedData,
+        this.masterKey!,
+      );
       const bookmarks = JSON.parse(decrypted) as BookmarkWithDeletion[];
       return Array.isArray(bookmarks) ? bookmarks : [];
     } catch (error) {
-      throw new DataCorruptionError('书签数据解密失败', error);
+      throw new DataCorruptionError("书签数据解密失败", error);
     }
   }
 
   /**
    * 写入所有书签
    */
-  private async writeBookmarks(bookmarks: BookmarkWithDeletion[]): Promise<void> {
+  private async writeBookmarks(
+    bookmarks: BookmarkWithDeletion[],
+  ): Promise<void> {
     this.ensureUnlocked();
 
     const plaintext = JSON.stringify(bookmarks);
-    const encrypted = await EncryptionService.encrypt(plaintext, this.masterKey!);
+    const encrypted = await EncryptionService.encrypt(
+      plaintext,
+      this.masterKey!,
+    );
     await this.storage.write(encrypted);
   }
 
@@ -97,19 +105,19 @@ export class BookmarkService {
   private validateUrl(url: string): ValidationError | null {
     try {
       const urlObj = new URL(url);
-      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+      if (!["http:", "https:"].includes(urlObj.protocol)) {
         return {
-          field: 'url',
-          message: 'URL必须使用http或https协议',
-          actualValue: url
+          field: "url",
+          message: "URL必须使用http或https协议",
+          actualValue: url,
         };
       }
       return null;
     } catch {
       return {
-        field: 'url',
-        message: 'URL格式无效',
-        actualValue: url
+        field: "url",
+        message: "URL格式无效",
+        actualValue: url,
       };
     }
   }
@@ -119,13 +127,16 @@ export class BookmarkService {
    */
   private validateTitle(title: string): ValidationError | null {
     if (!title || title.trim().length === 0) {
-      return { field: 'title', message: '标题不能为空' };
+      return { field: "title", message: "标题不能为空" };
     }
     if (title.length < MIN_TITLE_LENGTH) {
-      return { field: 'title', message: `标题至少${MIN_TITLE_LENGTH}个字符` };
+      return { field: "title", message: `标题至少${MIN_TITLE_LENGTH}个字符` };
     }
     if (title.length > MAX_TITLE_LENGTH) {
-      return { field: 'title', message: `标题不能超过${MAX_TITLE_LENGTH}个字符` };
+      return {
+        field: "title",
+        message: `标题不能超过${MAX_TITLE_LENGTH}个字符`,
+      };
     }
     return null;
   }
@@ -135,26 +146,26 @@ export class BookmarkService {
    */
   private escapeHtml(text: string): string {
     const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
     };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    return text.replace(/[&<>"']/g, (m) => map[m]);
   }
 
   /**
    * 生成UUID v4
    */
   private generateUuid(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
       return crypto.randomUUID();
     }
     // Fallback for older browsers
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
   }
@@ -162,10 +173,13 @@ export class BookmarkService {
   /**
    * 检查URL是否重复
    */
-  private async checkDuplicateUrl(url: string, excludeId?: string): Promise<Bookmark | null> {
+  private async checkDuplicateUrl(
+    url: string,
+    excludeId?: string,
+  ): Promise<Bookmark | null> {
     const bookmarks = await this.readBookmarks();
     const found = bookmarks.find(
-      b => !b.isDeleted && b.url === url && b.id !== excludeId
+      (b) => !b.isDeleted && b.url === url && b.id !== excludeId,
     );
     return found || null;
   }
@@ -187,8 +201,8 @@ export class BookmarkService {
       if (validationErrors.length > 0) {
         return {
           success: false,
-          error: '数据校验失败',
-          validationErrors
+          error: "数据校验失败",
+          validationErrors,
         };
       }
 
@@ -214,7 +228,8 @@ export class BookmarkService {
         createTime: now,
         updateTime: now,
         visitCount: 0,
-        version: 1  // 初始版本号
+        isReadLater: input.isReadLater || undefined,
+        version: 1, // 初始版本号
       };
 
       // 保存
@@ -224,12 +239,12 @@ export class BookmarkService {
 
       return {
         success: true,
-        data: bookmark
+        data: bookmark,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '添加书签失败'
+        error: error instanceof Error ? error.message : "添加书签失败",
       };
     }
   }
@@ -240,12 +255,12 @@ export class BookmarkService {
   async deleteBookmark(id: string): Promise<Result<UndoDeleteInfo>> {
     try {
       const bookmarks = await this.readBookmarks();
-      const index = bookmarks.findIndex(b => b.id === id && !b.isDeleted);
+      const index = bookmarks.findIndex((b) => b.id === id && !b.isDeleted);
 
       if (index === -1) {
         return {
           success: false,
-          error: '书签不存在或已被删除'
+          error: "书签不存在或已被删除",
         };
       }
 
@@ -257,7 +272,7 @@ export class BookmarkService {
 
       // 设置5秒后永久删除的定时器
       const timer = setTimeout(() => {
-        this.permanentlyDelete(id).catch(err => {
+        this.permanentlyDelete(id).catch((err) => {
           console.error(`永久删除书签失败 (ID: ${id}):`, err);
         });
       }, UNDO_TIMEOUT_MS);
@@ -269,13 +284,13 @@ export class BookmarkService {
         data: {
           bookmarkId: id,
           deleteTime,
-          remainingTime: UNDO_TIMEOUT_MS
-        }
+          remainingTime: UNDO_TIMEOUT_MS,
+        },
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '删除书签失败'
+        error: error instanceof Error ? error.message : "删除书签失败",
       };
     }
   }
@@ -286,21 +301,24 @@ export class BookmarkService {
   async undoDelete(id: string): Promise<Result<Bookmark>> {
     try {
       const bookmarks = await this.readBookmarks();
-      const index = bookmarks.findIndex(b => b.id === id && b.isDeleted);
+      const index = bookmarks.findIndex((b) => b.id === id && b.isDeleted);
 
       if (index === -1) {
         return {
           success: false,
-          error: '书签不存在或未处于删除状态'
+          error: "书签不存在或未处于删除状态",
         };
       }
 
       // 检查是否超时
       const bookmark = bookmarks[index];
-      if (bookmark.deleteTime && Date.now() - bookmark.deleteTime > UNDO_TIMEOUT_MS) {
+      if (
+        bookmark.deleteTime &&
+        Date.now() - bookmark.deleteTime > UNDO_TIMEOUT_MS
+      ) {
         return {
           success: false,
-          error: '撤销时间已过，书签已被永久删除'
+          error: "撤销时间已过，书签已被永久删除",
         };
       }
 
@@ -318,12 +336,12 @@ export class BookmarkService {
 
       return {
         success: true,
-        data: bookmark
+        data: bookmark,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '撤销删除失败'
+        error: error instanceof Error ? error.message : "撤销删除失败",
       };
     }
   }
@@ -333,7 +351,7 @@ export class BookmarkService {
    */
   private async permanentlyDelete(id: string): Promise<void> {
     const bookmarks = await this.readBookmarks();
-    const filtered = bookmarks.filter(b => b.id !== id);
+    const filtered = bookmarks.filter((b) => b.id !== id);
     await this.writeBookmarks(filtered);
     this.deleteTimers.delete(id);
   }
@@ -345,18 +363,18 @@ export class BookmarkService {
    * @param expectedVersion 期望版本号(用于并发控制,可选)
    */
   async editBookmark(
-    id: string, 
-    input: EditBookmarkInput, 
-    expectedVersion?: number
+    id: string,
+    input: EditBookmarkInput,
+    expectedVersion?: number,
   ): Promise<Result<Bookmark>> {
     try {
       const bookmarks = await this.readBookmarks();
-      const index = bookmarks.findIndex(b => b.id === id && !b.isDeleted);
+      const index = bookmarks.findIndex((b) => b.id === id && !b.isDeleted);
 
       if (index === -1) {
         return {
           success: false,
-          error: '书签不存在'
+          error: "书签不存在",
         };
       }
 
@@ -369,11 +387,13 @@ export class BookmarkService {
           return {
             success: false,
             error: `数据已在其他窗口变更(当前版本:${currentVersion}, 期望:${expectedVersion}),请刷新后重试`,
-            validationErrors: [{
-              field: 'version',
-              message: '版本号冲突',
-              actualValue: currentVersion
-            }]
+            validationErrors: [
+              {
+                field: "version",
+                message: "版本号冲突",
+                actualValue: currentVersion,
+              },
+            ],
           };
         }
       }
@@ -400,8 +420,8 @@ export class BookmarkService {
       if (validationErrors.length > 0) {
         return {
           success: false,
-          error: '数据校验失败',
-          validationErrors
+          error: "数据校验失败",
+          validationErrors,
         };
       }
 
@@ -430,12 +450,12 @@ export class BookmarkService {
 
       return {
         success: true,
-        data: bookmark
+        data: bookmark,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '编辑书签失败'
+        error: error instanceof Error ? error.message : "编辑书签失败",
       };
     }
   }
@@ -449,18 +469,18 @@ export class BookmarkService {
 
       // 默认不包含已删除的书签
       if (!filter?.includeDeleted) {
-        bookmarks = bookmarks.filter(b => !b.isDeleted);
+        bookmarks = bookmarks.filter((b) => !b.isDeleted);
       }
 
       // 按文件夹筛选
       if (filter?.folderId) {
-        bookmarks = bookmarks.filter(b => b.folderId === filter.folderId);
+        bookmarks = bookmarks.filter((b) => b.folderId === filter.folderId);
       }
 
       // 按标签筛选（AND逻辑）
       if (filter?.tagIds && filter.tagIds.length > 0) {
-        bookmarks = bookmarks.filter(b =>
-          filter.tagIds!.every(tagId => b.tags?.includes(tagId))
+        bookmarks = bookmarks.filter((b) =>
+          filter.tagIds!.every((tagId) => b.tags?.includes(tagId)),
         );
       }
 
@@ -468,28 +488,32 @@ export class BookmarkService {
       if (filter?.searchText) {
         const searchLower = filter.searchText.toLowerCase();
         bookmarks = bookmarks.filter(
-          b =>
+          (b) =>
             b.title.toLowerCase().includes(searchLower) ||
-            b.url.toLowerCase().includes(searchLower)
+            b.url.toLowerCase().includes(searchLower),
         );
       }
 
       // 排序
-      const sortBy = filter?.sortBy || 'createTime';
-      const sortOrder = filter?.sortOrder || 'desc';
+      const sortBy = filter?.sortBy || "createTime";
+      const sortOrder = filter?.sortOrder || "desc";
       bookmarks.sort((a, b) => {
         let aVal: number | string = a[sortBy] || 0;
         let bVal: number | string = b[sortBy] || 0;
 
-        if (sortBy === 'title') {
-          aVal = (a.title || '').toLowerCase();
-          bVal = (b.title || '').toLowerCase();
-          return sortOrder === 'asc'
-            ? aVal < bVal ? -1 : 1
-            : aVal > bVal ? -1 : 1;
+        if (sortBy === "title") {
+          aVal = (a.title || "").toLowerCase();
+          bVal = (b.title || "").toLowerCase();
+          return sortOrder === "asc"
+            ? aVal < bVal
+              ? -1
+              : 1
+            : aVal > bVal
+              ? -1
+              : 1;
         }
 
-        return sortOrder === 'asc'
+        return sortOrder === "asc"
           ? (aVal as number) - (bVal as number)
           : (bVal as number) - (aVal as number);
       });
@@ -503,12 +527,12 @@ export class BookmarkService {
 
       return {
         success: true,
-        data: bookmarks
+        data: bookmarks,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '查询书签失败'
+        error: error instanceof Error ? error.message : "查询书签失败",
       };
     }
   }
@@ -519,23 +543,23 @@ export class BookmarkService {
   async getBookmarkById(id: string): Promise<Result<Bookmark>> {
     try {
       const bookmarks = await this.readBookmarks();
-      const bookmark = bookmarks.find(b => b.id === id && !b.isDeleted);
+      const bookmark = bookmarks.find((b) => b.id === id && !b.isDeleted);
 
       if (!bookmark) {
         return {
           success: false,
-          error: '书签不存在'
+          error: "书签不存在",
         };
       }
 
       return {
         success: true,
-        data: bookmark
+        data: bookmark,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '获取书签失败'
+        error: error instanceof Error ? error.message : "获取书签失败",
       };
     }
   }
@@ -546,12 +570,12 @@ export class BookmarkService {
   async incrementVisitCount(id: string): Promise<Result<void>> {
     try {
       const bookmarks = await this.readBookmarks();
-      const index = bookmarks.findIndex(b => b.id === id && !b.isDeleted);
+      const index = bookmarks.findIndex((b) => b.id === id && !b.isDeleted);
 
       if (index === -1) {
         return {
           success: false,
-          error: '书签不存在'
+          error: "书签不存在",
         };
       }
 
@@ -563,7 +587,7 @@ export class BookmarkService {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '更新访问次数失败'
+        error: error instanceof Error ? error.message : "更新访问次数失败",
       };
     }
   }
@@ -576,22 +600,22 @@ export class BookmarkService {
       const bookmarks = await this.readBookmarks();
       const now = Date.now();
       const pending = bookmarks
-        .filter(b => b.isDeleted && b.deleteTime)
-        .map(b => ({
+        .filter((b) => b.isDeleted && b.deleteTime)
+        .map((b) => ({
           bookmarkId: b.id,
           deleteTime: b.deleteTime!,
-          remainingTime: Math.max(0, UNDO_TIMEOUT_MS - (now - b.deleteTime!))
+          remainingTime: Math.max(0, UNDO_TIMEOUT_MS - (now - b.deleteTime!)),
         }))
-        .filter(info => info.remainingTime > 0);
+        .filter((info) => info.remainingTime > 0);
 
       return {
         success: true,
-        data: pending
+        data: pending,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : '获取待删除列表失败'
+        error: error instanceof Error ? error.message : "获取待删除列表失败",
       };
     }
   }

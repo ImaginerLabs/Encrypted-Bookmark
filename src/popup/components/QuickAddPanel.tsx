@@ -32,6 +32,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
   const [note, setNote] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<boolean>(false);
+  const [isReadLater, setIsReadLater] = useState<boolean>(false);
 
   // 自动填充当前页面信息
   useEffect(() => {
@@ -49,6 +50,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
     setTags("");
     setNote("");
     setErrors({});
+    setIsReadLater(false);
   };
 
   // 表单验证
@@ -88,6 +90,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
         folderId: folderId || undefined,
         tags: tagArray,
         note: note || undefined,
+        isReadLater: isReadLater || undefined,
       });
 
       // 成功提示
@@ -206,6 +209,22 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
             onChange={(e) => setNote(e.target.value)}
             rows={3}
           />
+        </div>
+
+        {/* 稍后再读开关 */}
+        <div className="quick-add-read-later">
+          <label className="read-later-label">
+            <span className="read-later-icon">🕐</span>
+            <span className="read-later-text">稍后再读</span>
+          </label>
+          <button
+            type="button"
+            className={`read-later-toggle ${isReadLater ? "active" : ""}`}
+            onClick={() => setIsReadLater(!isReadLater)}
+            aria-label="标记为稍后再读"
+          >
+            <span className="toggle-thumb" />
+          </button>
         </div>
 
         {/* 通用错误 */}

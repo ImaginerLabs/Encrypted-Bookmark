@@ -95,6 +95,15 @@ export const PopupSelectors = {
   contextMenuItem: ".context-menu-item",
   contextMenuRename: '.context-menu-item:has-text("重命名")',
   contextMenuDelete: '.context-menu-item:has-text("删除")',
+
+  // 稍后再读
+  readLaterContainer: ".quick-add-read-later",
+  readLaterLabel: ".read-later-label",
+  readLaterIcon: ".read-later-icon",
+  readLaterText: ".read-later-text",
+  readLaterToggle: ".read-later-toggle",
+  readLaterToggleActive: ".read-later-toggle.active",
+  toggleThumb: ".toggle-thumb",
 };
 
 export const OptionsSelectors = {
