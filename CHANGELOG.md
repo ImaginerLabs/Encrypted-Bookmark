@@ -6,6 +6,37 @@
 
 ---
 
+## [1.4.0] - 2026-04-03
+
+### Added
+- 侧边栏新增"🕐 稍后再读"虚拟文件夹入口，支持集中查看和管理稍后再读书签
+- "稍后再读"入口显示待读书签数量角标
+- 底部状态栏上下文感知：选中"稍后再读"时显示"X 个待读书签"
+- BookmarkService.getBookmarks() 实现 isReadLater 筛选逻辑
+- FolderItem 组件支持自定义图标（icon）和系统文件夹标记（isSystem）
+
+### Changed
+- "全部书签"统计数量排除稍后再读书签，各文件夹数量统计同步排除
+- 开启"稍后再读"开关时自动隐藏文件夹选择器（互斥逻辑），关闭时恢复
+- ContextMenu 边界检测增强：使用 popup-container 的 getBoundingClientRect() 替代 window.innerHeight，防止菜单溢出和滚动条
+
+### Fixed
+- 修复 QuickAddPanel 文件夹下拉列表出现两个"未分类"的问题
+- 修复书签右键菜单在 Popup 底部区域溢出导致出现滚动条的问题
+
+---
+
+## [1.3.1] - 2026-04-03
+
+### Fixed
+- 修复文件夹 Hooks（useFolders/useFolderActions）中 ChromeStorageAdapter 实例化错误，folderStorage 误用默认书签存储键导致文件夹映射紊乱和空名称文件夹问题
+- 修复标签 Hooks（useTags/useTagActions）中 ChromeStorageAdapter 实例化错误，tagStorage 误用默认书签存储键
+- 修复侧边栏书签数量统计基于筛选结果而非全量数据的问题，选中文件夹或搜索时数量不再变化
+- 修复侧边栏「未分类」默认文件夹与「全部书签」重复显示的问题
+- 统一所有 Hooks 中 ChromeStorageAdapter 使用工厂方法（getInstance/getFolderInstance/getTagInstance）
+
+---
+
 ## [1.3.0] - 2026-04-03
 
 ### Fixed

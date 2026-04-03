@@ -170,22 +170,24 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
           {errors.url && <span className="quick-add-error">{errors.url}</span>}
         </div>
 
-        {/* 文件夹 */}
-        <div className="quick-add-field">
-          <label htmlFor="qa-folder">文件夹</label>
-          <select
-            id="qa-folder"
-            value={folderId}
-            onChange={(e) => setFolderId(e.target.value)}
-          >
-            <option value="">未分类</option>
-            {folders.map((folder) => (
-              <option key={folder.id} value={folder.id}>
-                {folder.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* 文件夹 - 稍后再读模式下隐藏 */}
+        {!isReadLater && (
+          <div className="quick-add-field">
+            <label htmlFor="qa-folder">文件夹</label>
+            <select
+              id="qa-folder"
+              value={folderId}
+              onChange={(e) => setFolderId(e.target.value)}
+            >
+              <option value="">未分类</option>
+              {folders.map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* 标签 */}
         <div className="quick-add-field">
@@ -220,7 +222,14 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
           <button
             type="button"
             className={`read-later-toggle ${isReadLater ? "active" : ""}`}
-            onClick={() => setIsReadLater(!isReadLater)}
+            onClick={() => {
+              const newVal = !isReadLater;
+              setIsReadLater(newVal);
+              if (newVal) {
+                // 开启稍后再读时，清空文件夹选择
+                setFolderId("");
+              }
+            }}
             aria-label="标记为稍后再读"
           >
             <span className="toggle-thumb" />

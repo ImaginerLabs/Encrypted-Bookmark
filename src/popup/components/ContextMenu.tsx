@@ -47,15 +47,39 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     if (menuRef.current) {
       const menu = menuRef.current;
       const rect = menu.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+      const popupContainer = document.querySelector(".popup-container");
+      const containerRect = popupContainer?.getBoundingClientRect() || {
+        top: 0,
+        left: 0,
+        bottom: window.innerHeight,
+        right: window.innerWidth,
+      };
 
-      if (rect.right > viewportWidth) {
-        menu.style.left = `${position.x - rect.width}px`;
+      let adjustedX = position.x;
+      let adjustedY = position.y;
+
+      // 右边溢出
+      if (adjustedX + rect.width > containerRect.right) {
+        adjustedX = position.x - rect.width;
       }
-      if (rect.bottom > viewportHeight) {
-        menu.style.top = `${position.y - rect.height}px`;
+
+      // 底部溢出：向上翻转
+      if (adjustedY + rect.height > containerRect.bottom) {
+        adjustedY = position.y - rect.height;
       }
+
+      // 防止翻转后超出顶部
+      if (adjustedY < containerRect.top) {
+        adjustedY = containerRect.top + 4;
+      }
+
+      // 防止超出左侧
+      if (adjustedX < containerRect.left) {
+        adjustedX = containerRect.left + 4;
+      }
+
+      menu.style.left = `${adjustedX}px`;
+      menu.style.top = `${adjustedY}px`;
     }
 
     return () => {

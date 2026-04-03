@@ -104,6 +104,10 @@ export const PopupSelectors = {
   readLaterToggle: ".read-later-toggle",
   readLaterToggleActive: ".read-later-toggle.active",
   toggleThumb: ".toggle-thumb",
+
+  // 稍后再读文件夹
+  readLaterFolder: '.folder-item:has-text("稍后再读")',
+  folderListDivider: ".folder-list-divider",
 };
 
 export const OptionsSelectors = {

@@ -28,6 +28,7 @@ export const Popup: React.FC = () => {
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState<boolean>(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTabType>("folders");
+  const [isReadLaterMode, setIsReadLaterMode] = useState<boolean>(false);
 
   // 确认弹窗状态
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -40,18 +41,26 @@ export const Popup: React.FC = () => {
   // Hooks
   const { searchKeyword, handleSearch } = useSearch();
   const { bookmarks, loading: bookmarksLoading } = useBookmarks(
-    selectedFolderId,
+    isReadLaterMode ? null : selectedFolderId,
     searchKeyword,
+    isReadLaterMode ? true : undefined,
   );
+  // 获取全量书签数据，用于侧边栏数量统计（不受筛选条件影响）
+  const { bookmarks: allBookmarks } = useBookmarks(null, "");
   const { folders, refetch: refetchFolders } = useFolders();
   const { tags, refetch: refetchTags } = useTags();
   const { createFolder, renameFolder, deleteFolder } = useFolderActions();
   const { deleteTag } = useTagActions();
 
-  // 计算总书签数和各文件夹书签数
-  const totalBookmarkCount = bookmarks.length;
+  // 基于全量数据计算总书签数和各文件夹书签数（侧边栏统计始终显示全量数据）
+  // F2：排除稍后再读书签
+  const normalBookmarks = allBookmarks.filter((b) => b.isReadLater !== true);
+  const readLaterCount = allBookmarks.filter(
+    (b) => b.isReadLater === true,
+  ).length;
+  const totalBookmarkCount = normalBookmarks.length;
   const folderBookmarkCounts: Record<string, number> = {};
-  bookmarks.forEach((b) => {
+  normalBookmarks.forEach((b) => {
     const fid = b.folderId || "uncategorized";
     folderBookmarkCounts[fid] = (folderBookmarkCounts[fid] || 0) + 1;
   });
@@ -64,12 +73,21 @@ export const Popup: React.FC = () => {
       setSelectedTagId(null);
     } else {
       setSelectedFolderId(null);
+      setIsReadLaterMode(false);
     }
   }, []);
 
   // 选择文件夹
   const handleSelectFolder = useCallback((folderId: string | null) => {
     setSelectedFolderId(folderId);
+    setSelectedTagId(null);
+    setIsReadLaterMode(false);
+  }, []);
+
+  // 选择稍后再读
+  const handleSelectReadLater = useCallback(() => {
+    setIsReadLaterMode(true);
+    setSelectedFolderId(null);
     setSelectedTagId(null);
   }, []);
 
@@ -86,7 +104,7 @@ export const Popup: React.FC = () => {
 
   // 保存书签
   const handleSaveBookmark = useCallback(async (data: AddBookmarkInput) => {
-    const storage = new ChromeStorageAdapter();
+    const storage = ChromeStorageAdapter.getInstance();
     const bookmarkService = new BookmarkService(storage);
 
     const masterKey = sessionStorage.getItem("masterKey");
@@ -120,7 +138,7 @@ export const Popup: React.FC = () => {
       message: "确定要删除这个书签吗？此操作不可撤销。",
       onConfirm: async () => {
         try {
-          const storage = new ChromeStorageAdapter();
+          const storage = ChromeStorageAdapter.getInstance();
           const bookmarkService = new BookmarkService(storage);
 
           const masterKey = sessionStorage.getItem("masterKey");
@@ -282,11 +300,14 @@ export const Popup: React.FC = () => {
           <SidebarTabs activeTab={sidebarTab} onTabChange={handleTabChange} />
           {sidebarTab === "folders" ? (
             <FolderList
-              folders={folders}
+              folders={folders.filter((f) => f.id !== "uncategorized")}
               selectedId={selectedFolderId}
               onSelect={handleSelectFolder}
               totalBookmarkCount={totalBookmarkCount}
               folderBookmarkCounts={folderBookmarkCounts}
+              readLaterCount={readLaterCount}
+              isReadLaterSelected={isReadLaterMode}
+              onSelectReadLater={handleSelectReadLater}
               onRename={handleRenameFolder}
               onDelete={handleDeleteFolder}
               onCreate={handleCreateFolder}
@@ -313,13 +334,17 @@ export const Popup: React.FC = () => {
 
       {/* 底部状态栏 */}
       <div className="popup-footer">
-        <span className="bookmark-count">{bookmarks.length} 个书签</span>
+        <span className="bookmark-count">
+          {isReadLaterMode
+            ? `${bookmarks.length} 个待读书签`
+            : `${bookmarks.length} 个书签`}
+        </span>
       </div>
 
       {/* 快速添加面板 */}
       <QuickAddPanel
         visible={showQuickAdd}
-        folders={folders}
+        folders={folders.filter((f) => f.id !== "uncategorized")}
         onClose={() => setShowQuickAdd(false)}
         onSave={handleSaveBookmark}
       />

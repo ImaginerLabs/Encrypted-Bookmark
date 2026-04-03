@@ -20,6 +20,12 @@ interface FolderListProps {
   totalBookmarkCount?: number;
   /** 各文件夹书签数量映射 */
   folderBookmarkCounts?: Record<string, number>;
+  /** 稍后再读书签数量 */
+  readLaterCount?: number;
+  /** 是否选中稍后再读 */
+  isReadLaterSelected?: boolean;
+  /** 选择稍后再读回调 */
+  onSelectReadLater?: () => void;
   /** 重命名文件夹回调 */
   onRename?: (id: string, newName: string) => void;
   /** 删除文件夹回调 */
@@ -34,6 +40,9 @@ export const FolderList: React.FC<FolderListProps> = ({
   onSelect,
   totalBookmarkCount,
   folderBookmarkCounts,
+  readLaterCount,
+  isReadLaterSelected,
+  onSelectReadLater,
   onRename,
   onDelete,
   onCreate,
@@ -66,10 +75,28 @@ export const FolderList: React.FC<FolderListProps> = ({
       {/* 全部书签 */}
       <FolderItem
         folder={null}
-        isSelected={selectedId === null}
+        isSelected={selectedId === null && !isReadLaterSelected}
         onClick={() => onSelect(null)}
         bookmarkCount={totalBookmarkCount}
       />
+
+      {/* 稍后再读 */}
+      <FolderItem
+        folder={{
+          id: "__read_later__",
+          name: "稍后再读",
+          sort: -1,
+          createTime: 0,
+        }}
+        isSelected={!!isReadLaterSelected}
+        onClick={() => onSelectReadLater?.()}
+        bookmarkCount={readLaterCount}
+        icon="🕐"
+        isSystem
+      />
+
+      {/* 分隔线 */}
+      <div className="folder-list-divider" />
 
       {/* 文件夹列表 */}
       {folders.map((folder) => (

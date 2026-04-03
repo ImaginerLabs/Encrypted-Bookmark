@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
-import type { Bookmark } from '@/types/data';
-import { BookmarkService } from '@/services/BookmarkService';
-import { ChromeStorageAdapter } from '@/storage/adapters/ChromeStorageAdapter';
+import { useState, useEffect } from "react";
+import type { Bookmark } from "@/types/data";
+import { BookmarkService } from "@/services/BookmarkService";
+import { ChromeStorageAdapter } from "@/storage/adapters/ChromeStorageAdapter";
 
 /**
  * 书签数据管理 Hook
  * 负责获取、过滤、搜索书签
  */
-export const useBookmarks = (folderId: string | null, searchKeyword: string) => {
+export const useBookmarks = (
+  folderId: string | null,
+  searchKeyword: string,
+  isReadLater?: boolean,
+) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
@@ -19,13 +23,13 @@ export const useBookmarks = (folderId: string | null, searchKeyword: string) => 
         setError(null);
 
         // 创建 BookmarkService 实例
-        const storage = new ChromeStorageAdapter();
+        const storage = ChromeStorageAdapter.getInstance();
         const bookmarkService = new BookmarkService(storage);
 
         // 从 sessionStorage 获取主密钥（Task4 会话管理）
-        const masterKey = sessionStorage.getItem('masterKey');
+        const masterKey = sessionStorage.getItem("masterKey");
         if (!masterKey) {
-          throw new Error('未解锁，请先输入密码');
+          throw new Error("未解锁，请先输入密码");
         }
 
         bookmarkService.setMasterKey(masterKey);
@@ -34,18 +38,19 @@ export const useBookmarks = (folderId: string | null, searchKeyword: string) => 
         const result = await bookmarkService.getBookmarks({
           folderId: folderId || undefined,
           searchText: searchKeyword || undefined,
+          isReadLater: isReadLater,
           includeDeleted: false,
-          sortBy: 'updateTime',
-          sortOrder: 'desc'
+          sortBy: "updateTime",
+          sortOrder: "desc",
         });
 
         if (result.success && result.data) {
           setBookmarks(result.data);
         } else {
-          throw new Error(result.error || '获取书签失败');
+          throw new Error(result.error || "获取书签失败");
         }
       } catch (err) {
-        console.error('加载书签失败:', err);
+        console.error("加载书签失败:", err);
         setError(err as Error);
         setBookmarks([]);
       } finally {
@@ -54,7 +59,7 @@ export const useBookmarks = (folderId: string | null, searchKeyword: string) => 
     };
 
     loadBookmarks();
-  }, [folderId, searchKeyword]);
+  }, [folderId, searchKeyword, isReadLater]);
 
   return { bookmarks, loading, error };
 };

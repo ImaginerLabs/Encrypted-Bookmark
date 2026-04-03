@@ -1,7 +1,8 @@
 {
   "name": "encrypted-bookmark",
-"version": "1.3.0",
-  "description": "Local-first, privacy-focused bookmark manager with encryption"  "type": "module",
+  "version": "1.4.0",
+  "description": "Local-first, privacy-focused bookmark manager with encryption",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

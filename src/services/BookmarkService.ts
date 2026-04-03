@@ -477,6 +477,15 @@ export class BookmarkService {
         bookmarks = bookmarks.filter((b) => b.folderId === filter.folderId);
       }
 
+      // 按"稍后再读"筛选
+      if (filter?.isReadLater !== undefined) {
+        if (filter.isReadLater) {
+          bookmarks = bookmarks.filter((b) => b.isReadLater === true);
+        } else {
+          bookmarks = bookmarks.filter((b) => !b.isReadLater);
+        }
+      }
+
       // 按标签筛选（AND逻辑）
       if (filter?.tagIds && filter.tagIds.length > 0) {
         bookmarks = bookmarks.filter((b) =>

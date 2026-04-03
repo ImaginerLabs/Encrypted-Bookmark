@@ -22,8 +22,8 @@ export const useTags = () => {
       setLoading(true);
       setError(null);
 
-      const tagStorage = new ChromeStorageAdapter();
-      const bookmarkStorage = new ChromeStorageAdapter();
+      const tagStorage = ChromeStorageAdapter.getTagInstance();
+      const bookmarkStorage = ChromeStorageAdapter.getInstance();
       const tagService = new TagService(tagStorage, bookmarkStorage);
 
       const masterKey = sessionStorage.getItem("masterKey");

@@ -18,6 +18,10 @@ interface FolderItemProps {
   onClick: () => void;
   /** 书签数量 */
   bookmarkCount?: number;
+  /** 自定义图标（覆盖默认的 📁/📚） */
+  icon?: string;
+  /** 是否为系统虚拟文件夹（不显示右键菜单） */
+  isSystem?: boolean;
   /** 重命名回调 */
   onRename?: (id: string, newName: string) => void;
   /** 删除回调 */
@@ -29,6 +33,8 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   isSelected,
   onClick,
   bookmarkCount,
+  icon,
+  isSystem,
   onRename,
   onDelete,
 }) => {
@@ -40,8 +46,8 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   });
 
   const displayName = folder ? folder.name : "全部书签";
-  const icon = folder ? "📁" : "📚";
-  const isDefault = !folder || folder.id === "uncategorized";
+  const displayIcon = icon || (folder ? "📁" : "📚");
+  const isDefault = !folder || folder.id === "uncategorized" || isSystem;
 
   // 右键菜单
   const handleContextMenu = useCallback(
@@ -104,7 +110,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
           }
         }}
       >
-        <span className="folder-icon">{icon}</span>
+        <span className="folder-icon">{displayIcon}</span>
 
         {isEditing && folder ? (
           <InlineEdit

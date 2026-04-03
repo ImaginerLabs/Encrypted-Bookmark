@@ -4,7 +4,8 @@ import { PopupSelectors } from "../../helpers/selectors";
 
 /**
  * Popup - 稍后再读功能测试
- * 覆盖 QuickAddPanel 中的"稍后再读"Toggle 开关
+ * 覆盖 V1.3.1 QuickAddPanel 中的"稍后再读"Toggle 开关
+ * 覆盖 V1.4.0 侧边栏"稍后再读"虚拟文件夹、互斥逻辑、统计排除、状态栏等
  */
 test.describe("Popup - 稍后再读功能", () => {
   /** 设置密码并解锁 */
@@ -30,6 +31,8 @@ test.describe("Popup - 稍后再读功能", () => {
     await popupPage.click(PopupSelectors.btnQuickAdd);
     await expect(popupPage.locator(".quick-add-panel")).toBeVisible();
   }
+
+  // ========== V1.3.1: QuickAddPanel 稍后再读开关 ==========
 
   test("快速添加面板中显示稍后再读开关", async ({
     extensionContext,
@@ -171,6 +174,233 @@ test.describe("Popup - 稍后再读功能", () => {
 
     const toggle = popupPage.locator(PopupSelectors.readLaterToggle);
     await expect(toggle).toHaveAttribute("aria-label", "标记为稍后再读");
+
+    await popupPage.close();
+  });
+
+  // ========== V1.4.0 F1: 侧边栏"稍后再读"虚拟文件夹 ==========
+
+  test("侧边栏显示「🕐 稍后再读」入口", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 验证"稍后再读"文件夹入口存在
+    const readLaterFolder = popupPage.locator(PopupSelectors.readLaterFolder);
+    await expect(readLaterFolder).toBeVisible();
+    await expect(readLaterFolder).toContainText("稍后再读");
+
+    await popupPage.close();
+  });
+
+  test("「稍后再读」位于「全部书签」下方", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    const allBookmarks = popupPage.locator(PopupSelectors.folderItem).first();
+    const readLaterFolder = popupPage.locator(PopupSelectors.readLaterFolder);
+
+    const allBox = await allBookmarks.boundingBox();
+    const readLaterBox = await readLaterFolder.boundingBox();
+
+    expect(allBox).toBeTruthy();
+    expect(readLaterBox).toBeTruthy();
+    expect(allBox!.y).toBeLessThan(readLaterBox!.y);
+
+    await popupPage.close();
+  });
+
+  test("「稍后再读」与用户文件夹之间有分隔线", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 验证分隔线存在
+    const divider = popupPage.locator(PopupSelectors.folderListDivider);
+    await expect(divider).toBeVisible();
+
+    await popupPage.close();
+  });
+
+  test("「稍后再读」不可右键操作", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 在"稍后再读"上右键
+    const readLaterFolder = popupPage.locator(PopupSelectors.readLaterFolder);
+    await readLaterFolder.click({ button: "right" });
+
+    // 验证右键菜单不出现
+    await expect(
+      popupPage.locator(PopupSelectors.contextMenu),
+    ).not.toBeVisible();
+
+    await popupPage.close();
+  });
+
+  test("点击「稍后再读」切换选中状态", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 点击"稍后再读"
+    const readLaterFolder = popupPage.locator(PopupSelectors.readLaterFolder);
+    await readLaterFolder.click();
+
+    // 验证"稍后再读"被选中
+    await expect(readLaterFolder).toHaveClass(/selected/);
+
+    // 验证"全部书签"取消选中
+    const allBookmarks = popupPage.locator(PopupSelectors.folderItem).first();
+    await expect(allBookmarks).not.toHaveClass(/selected/);
+
+    await popupPage.close();
+  });
+
+  test("点击「全部书签」后「稍后再读」取消选中", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 先选中"稍后再读"
+    const readLaterFolder = popupPage.locator(PopupSelectors.readLaterFolder);
+    await readLaterFolder.click();
+    await expect(readLaterFolder).toHaveClass(/selected/);
+
+    // 点击"全部书签"
+    const allBookmarks = popupPage.locator(PopupSelectors.folderItem).first();
+    await allBookmarks.click();
+
+    // 验证"稍后再读"取消选中
+    await expect(readLaterFolder).not.toHaveClass(/selected/);
+    await expect(allBookmarks).toHaveClass(/selected/);
+
+    await popupPage.close();
+  });
+
+  // ========== V1.4.0 F4: 互斥逻辑 ==========
+
+  test("开启稍后再读后文件夹选择器隐藏", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+    await openQuickAddPanel(popupPage);
+
+    // 文件夹选择器默认可见
+    await expect(popupPage.locator("#qa-folder")).toBeVisible();
+
+    // 开启稍后再读
+    const toggle = popupPage.locator(PopupSelectors.readLaterToggle);
+    await toggle.click();
+
+    // 文件夹选择器隐藏
+    await expect(popupPage.locator("#qa-folder")).not.toBeVisible();
+
+    await popupPage.close();
+  });
+
+  test("关闭稍后再读后文件夹选择器恢复", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+    await openQuickAddPanel(popupPage);
+
+    // 开启稍后再读
+    const toggle = popupPage.locator(PopupSelectors.readLaterToggle);
+    await toggle.click();
+    await expect(popupPage.locator("#qa-folder")).not.toBeVisible();
+
+    // 关闭稍后再读
+    await toggle.click();
+
+    // 文件夹选择器恢复
+    await expect(popupPage.locator("#qa-folder")).toBeVisible();
+
+    await popupPage.close();
+  });
+
+  // ========== V1.4.0 F8: 底部状态栏上下文感知 ==========
+
+  test("选中「稍后再读」时底部显示待读书签文案", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 点击"稍后再读"
+    const readLaterFolder = popupPage.locator(PopupSelectors.readLaterFolder);
+    await readLaterFolder.click();
+
+    // 验证底部状态栏文案
+    const footer = popupPage.locator(PopupSelectors.bookmarkCount);
+    await expect(footer).toContainText("个待读书签");
+
+    await popupPage.close();
+  });
+
+  test("选中「全部书签」时底部显示普通书签文案", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+
+    // 确保在"全部书签"状态
+    const allBookmarks = popupPage.locator(PopupSelectors.folderItem).first();
+    await allBookmarks.click();
+
+    // 验证底部状态栏文案
+    const footer = popupPage.locator(PopupSelectors.bookmarkCount);
+    await expect(footer).toContainText("个书签");
+    // 确保不是"待读"文案
+    const text = await footer.innerText();
+    expect(text).not.toContain("待读");
+
+    await popupPage.close();
+  });
+
+  // ========== V1.4.0 F6: QuickAddPanel 文件夹列表去重 ==========
+
+  test("添加书签面板文件夹列表中只有一个「未分类」", async ({
+    extensionContext,
+    extensionId,
+  }) => {
+    const popupPage = await createPopupPage(extensionContext, extensionId);
+    await setupUnlocked(popupPage);
+    await openQuickAddPanel(popupPage);
+
+    // 获取所有 option 的文本
+    const options = popupPage.locator("#qa-folder option");
+    const count = await options.count();
+    let uncategorizedCount = 0;
+    for (let i = 0; i < count; i++) {
+      const text = await options.nth(i).innerText();
+      if (text.includes("未分类")) {
+        uncategorizedCount++;
+      }
+    }
+
+    // 只应有一个"未分类"
+    expect(uncategorizedCount).toBe(1);
 
     await popupPage.close();
   });

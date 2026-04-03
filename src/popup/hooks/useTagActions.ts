@@ -13,8 +13,8 @@ export const useTagActions = () => {
 
   /** 创建 TagService 实例 */
   const createService = useCallback(() => {
-    const tagStorage = new ChromeStorageAdapter();
-    const bookmarkStorage = new ChromeStorageAdapter();
+    const tagStorage = ChromeStorageAdapter.getTagInstance();
+    const bookmarkStorage = ChromeStorageAdapter.getInstance();
     const service = new TagService(tagStorage, bookmarkStorage);
 
     const masterKey = sessionStorage.getItem("masterKey");

@@ -18,8 +18,8 @@ export const useFolderActions = () => {
 
   /** 创建 FolderService 实例 */
   const createService = useCallback(() => {
-    const folderStorage = new ChromeStorageAdapter();
-    const bookmarkStorage = new ChromeStorageAdapter();
+    const folderStorage = ChromeStorageAdapter.getFolderInstance();
+    const bookmarkStorage = ChromeStorageAdapter.getInstance();
     const service = new FolderService(folderStorage, bookmarkStorage);
 
     const masterKey = sessionStorage.getItem("masterKey");

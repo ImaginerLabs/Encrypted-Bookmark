@@ -17,8 +17,8 @@ export const useFolders = () => {
       setLoading(true);
       setError(null);
 
-      const folderStorage = new ChromeStorageAdapter();
-      const bookmarkStorage = new ChromeStorageAdapter();
+      const folderStorage = ChromeStorageAdapter.getFolderInstance();
+      const bookmarkStorage = ChromeStorageAdapter.getInstance();
       const folderService = new FolderService(folderStorage, bookmarkStorage);
 
       const masterKey = sessionStorage.getItem("masterKey");

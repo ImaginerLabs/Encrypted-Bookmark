@@ -9,7 +9,8 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   padding: 4px;
   z-index: 1000;
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: calc(100vh - 16px);
   animation: menuFadeIn 0.1s ease-out;
 }
 

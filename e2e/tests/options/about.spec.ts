@@ -21,7 +21,7 @@ test.describe("Options - 关于面板", () => {
       "Encrypted Bookmark",
     );
     await expect(optionsPage.locator(".app-version")).toContainText("版本");
-    await expect(optionsPage.locator(".app-version")).toContainText("1.2.0");
+    await expect(optionsPage.locator(".app-version")).toContainText("1.4.0");
   });
 
   test("显示应用描述", async ({ optionsPage }) => {
