@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { PasswordService } from '@/services';
-import type { PasswordStatus } from '@/types';
+import React, { useState, useEffect } from "react";
+import { PasswordService } from "@/services";
+import type { PasswordStatus } from "@/types";
 import {
   WeakPasswordError,
   InvalidPasswordError,
-  AccountLockedError
-} from '@/types';
-import { Popup } from './Popup';
-import './App.css';
+  AccountLockedError,
+} from "@/types";
+import { Popup } from "./Popup";
+import "./App.css";
 
 /**
  * Popup 主应用
@@ -15,9 +15,9 @@ import './App.css';
  */
 const App: React.FC = () => {
   const [status, setStatus] = useState<PasswordStatus | null>(null);
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
@@ -32,37 +32,39 @@ const App: React.FC = () => {
       const passwordStatus = await PasswordService.getPasswordStatus();
       setStatus(passwordStatus);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载状态失败');
+      setError(err instanceof Error ? err.message : "加载状态失败");
     }
   };
 
-  const checkUnlockStatus = () => {
-    setIsUnlocked(PasswordService.isUnlocked());
+  // 异步检查解锁状态：通过 SessionService 检查会话是否仍然有效（基于 autoLockMinutes 配置）
+  const checkUnlockStatus = async () => {
+    const unlocked = await PasswordService.checkAndRestoreSession();
+    setIsUnlocked(unlocked);
   };
 
   // 设置主密码
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('两次输入的密码不一致');
+      setError("两次输入的密码不一致");
       return;
     }
 
     setLoading(true);
     try {
       await PasswordService.setMasterPassword(password);
-      setPassword('');
-      setConfirmPassword('');
+      setPassword("");
+      setConfirmPassword("");
       await loadPasswordStatus();
-      checkUnlockStatus();
-      alert('主密码设置成功！');
+      await checkUnlockStatus();
+      alert("主密码设置成功！");
     } catch (err) {
       if (err instanceof WeakPasswordError) {
         setError(err.message);
       } else {
-        setError(err instanceof Error ? err.message : '设置密码失败');
+        setError(err instanceof Error ? err.message : "设置密码失败");
       }
     } finally {
       setLoading(false);
@@ -72,13 +74,13 @@ const App: React.FC = () => {
   // 解锁
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       await PasswordService.verifyMasterPassword(password);
-      setPassword('');
-      checkUnlockStatus();
+      setPassword("");
+      await checkUnlockStatus();
       await loadPasswordStatus();
     } catch (err) {
       if (err instanceof InvalidPasswordError) {
@@ -87,7 +89,7 @@ const App: React.FC = () => {
         const seconds = Math.ceil((err.lockedUntil - Date.now()) / 1000);
         setError(`账户已锁定，请在 ${seconds} 秒后重试`);
       } else {
-        setError(err instanceof Error ? err.message : '解锁失败');
+        setError(err instanceof Error ? err.message : "解锁失败");
       }
       await loadPasswordStatus();
     } finally {
@@ -98,7 +100,10 @@ const App: React.FC = () => {
   if (!status) {
     return (
       <div className="app">
-        <div className="loading">加载中...</div>
+        <div className="app-loading">
+          <div className="app-loading-spinner"></div>
+          <span className="loading">加载中...</span>
+        </div>
       </div>
     );
   }
@@ -107,39 +112,48 @@ const App: React.FC = () => {
   if (!status.isSet) {
     return (
       <div className="app">
-        <div className="header">
-          <h1>🔐 Encrypted Bookmark</h1>
-          <p>首次使用，请设置主密码</p>
-        </div>
-        <form onSubmit={handleSetPassword} className="form">
-          <div className="form-group">
-            <label>主密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="8-32 位字符"
-              disabled={loading}
-              autoFocus
-            />
+        <div className="app-auth-container">
+          <div className="app-brand">
+            <div className="app-brand-icon">🔐</div>
+            <h1 className="app-brand-title">Encrypted Bookmark</h1>
+            <p className="app-brand-subtitle">首次使用，请设置主密码</p>
           </div>
-          <div className="form-group">
-            <label>确认密码</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="再次输入密码"
+          <form onSubmit={handleSetPassword} className="app-form">
+            <div className="app-form-group">
+              <label className="app-form-label">主密码</label>
+              <input
+                type="password"
+                className="app-form-input"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="8-32 位字符"
+                disabled={loading}
+                autoFocus
+              />
+            </div>
+            <div className="app-form-group">
+              <label className="app-form-label">确认密码</label>
+              <input
+                type="password"
+                className="app-form-input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="再次输入密码"
+                disabled={loading}
+              />
+            </div>
+            {error && <div className="app-error">{error}</div>}
+            <button
+              type="submit"
+              className="app-btn-primary"
               disabled={loading}
-            />
+            >
+              {loading ? "设置中..." : "设置密码"}
+            </button>
+          </form>
+          <div className="app-tips">
+            <p>⚠️ 请牢记此密码，丢失后无法恢复数据</p>
           </div>
-          {error && <div className="error">{error}</div>}
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? '设置中...' : '设置密码'}
-          </button>
-        </form>
-        <div className="tips">
-          <p>⚠️ 请牢记此密码，丢失后无法恢复数据</p>
         </div>
       </div>
     );
@@ -150,13 +164,18 @@ const App: React.FC = () => {
     const seconds = Math.ceil((status.lockedUntil - Date.now()) / 1000);
     return (
       <div className="app">
-        <div className="header">
-          <h1>🔒 账户已锁定</h1>
-          <p>密码错误次数过多</p>
-        </div>
-        <div className="locked-info">
-          <p>请在 {seconds} 秒后重试</p>
-          <p className="attempts">失败次数：{status.failedAttempts}</p>
+        <div className="app-auth-container">
+          <div className="app-brand">
+            <div className="app-brand-icon">🔒</div>
+            <h1 className="app-brand-title">账户已锁定</h1>
+            <p className="app-brand-subtitle">密码错误次数过多</p>
+          </div>
+          <div className="app-locked-info">
+            <p className="app-locked-timer">请在 {seconds} 秒后重试</p>
+            <p className="app-locked-attempts">
+              失败次数：{status.failedAttempts}
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -170,33 +189,37 @@ const App: React.FC = () => {
   // 需要解锁
   return (
     <div className="app">
-      <div className="header">
-        <h1>🔐 Encrypted Bookmark</h1>
-        <p>请输入主密码解锁</p>
-      </div>
-      <form onSubmit={handleUnlock} className="form">
-        <div className="form-group">
-          <label>主密码</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="输入密码"
-            disabled={loading}
-            autoFocus
-          />
+      <div className="app-auth-container">
+        <div className="app-brand">
+          <div className="app-brand-icon">🔐</div>
+          <h1 className="app-brand-title">Encrypted Bookmark</h1>
+          <p className="app-brand-subtitle">请输入主密码解锁</p>
         </div>
-        {error && <div className="error">{error}</div>}
-        {status.failedAttempts > 0 && (
-          <div className="warning">
-            ⚠️ 已失败 {status.failedAttempts} 次
-            {status.failedAttempts >= 3 && '，请注意账户锁定风险'}
+        <form onSubmit={handleUnlock} className="app-form">
+          <div className="app-form-group">
+            <label className="app-form-label">主密码</label>
+            <input
+              type="password"
+              className="app-form-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="输入密码"
+              disabled={loading}
+              autoFocus
+            />
           </div>
-        )}
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? '验证中...' : '解锁'}
-        </button>
-      </form>
+          {error && <div className="app-error">{error}</div>}
+          {status.failedAttempts > 0 && (
+            <div className="app-warning">
+              ⚠️ 已失败 {status.failedAttempts} 次
+              {status.failedAttempts >= 3 && "，请注意账户锁定风险"}
+            </div>
+          )}
+          <button type="submit" className="app-btn-primary" disabled={loading}>
+            {loading ? "验证中..." : "解锁"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

@@ -1,12 +1,14 @@
-import type { PasswordStatus } from '@/types';
+import type { PasswordStatus } from "@/types";
 import {
   WeakPasswordError,
   InvalidPasswordError,
   AccountLockedError,
   StorageError,
-  PasswordError
-} from '@/types';
-import { EncryptionService } from './EncryptionService';
+  PasswordError,
+} from "@/types";
+import { EncryptionService } from "./EncryptionService";
+import { SessionService } from "./SessionService";
+import { LockService } from "./LockService";
 
 /**
  * 密码管理服务
@@ -30,22 +32,26 @@ export class PasswordService {
   /**
    * 从 chrome.storage.local 读取数据
    */
-  private static async getStorageData<T>(keys: string[]): Promise<Record<string, T>> {
+  private static async getStorageData<T>(
+    keys: string[],
+  ): Promise<Record<string, T>> {
     try {
-      return await chrome.storage.local.get(keys) as Record<string, T>;
+      return (await chrome.storage.local.get(keys)) as Record<string, T>;
     } catch (error) {
-      throw new StorageError('读取存储数据失败', error);
+      throw new StorageError("读取存储数据失败", error);
     }
   }
 
   /**
    * 写入 chrome.storage.local
    */
-  private static async setStorageData(data: Record<string, unknown>): Promise<void> {
+  private static async setStorageData(
+    data: Record<string, unknown>,
+  ): Promise<void> {
     try {
       await chrome.storage.local.set(data);
     } catch (error) {
-      throw new StorageError('写入存储数据失败', error);
+      throw new StorageError("写入存储数据失败", error);
     }
   }
 
@@ -54,8 +60,8 @@ export class PasswordService {
    */
   static async getPasswordStatus(): Promise<PasswordStatus> {
     const data = await this.getStorageData<PasswordStatus | string>([
-      'passwordHash',
-      'passwordStatus'
+      "passwordHash",
+      "passwordStatus",
     ]);
 
     const isSet = Boolean(data.passwordHash);
@@ -64,7 +70,7 @@ export class PasswordService {
     return {
       isSet,
       failedAttempts: status?.failedAttempts || 0,
-      lockedUntil: status?.lockedUntil || 0
+      lockedUntil: status?.lockedUntil || 0,
     };
   }
 
@@ -75,12 +81,12 @@ export class PasswordService {
   static validatePasswordStrength(password: string): void {
     if (password.length < this.MIN_PASSWORD_LENGTH) {
       throw new WeakPasswordError(
-        `密码长度不足：至少需要 ${this.MIN_PASSWORD_LENGTH} 个字符`
+        `密码长度不足：至少需要 ${this.MIN_PASSWORD_LENGTH} 个字符`,
       );
     }
     if (password.length > this.MAX_PASSWORD_LENGTH) {
       throw new WeakPasswordError(
-        `密码长度过长：最多 ${this.MAX_PASSWORD_LENGTH} 个字符`
+        `密码长度过长：最多 ${this.MAX_PASSWORD_LENGTH} 个字符`,
       );
     }
     // 可扩展：添加更多强度检查（大小写、数字、特殊字符等）
@@ -98,7 +104,7 @@ export class PasswordService {
       const remainingSeconds = Math.ceil((status.lockedUntil - now) / 1000);
       throw new AccountLockedError(
         `账户已锁定，请在 ${remainingSeconds} 秒后重试`,
-        status.lockedUntil
+        status.lockedUntil,
       );
     }
 
@@ -108,8 +114,8 @@ export class PasswordService {
         passwordStatus: {
           isSet: status.isSet,
           failedAttempts: 0,
-          lockedUntil: 0
-        }
+          lockedUntil: 0,
+        },
       });
     }
   }
@@ -133,8 +139,8 @@ export class PasswordService {
       passwordStatus: {
         isSet: status.isSet,
         failedAttempts: newFailedAttempts,
-        lockedUntil
-      }
+        lockedUntil,
+      },
     });
   }
 
@@ -147,8 +153,8 @@ export class PasswordService {
       passwordStatus: {
         isSet: status.isSet,
         failedAttempts: 0,
-        lockedUntil: 0
-      }
+        lockedUntil: 0,
+      },
     });
   }
 
@@ -162,7 +168,7 @@ export class PasswordService {
     // 检查是否已设置密码
     const status = await this.getPasswordStatus();
     if (status.isSet) {
-      throw new PasswordError('主密码已设置，无法重复设置');
+      throw new PasswordError("主密码已设置，无法重复设置");
     }
 
     // 验证密码强度
@@ -177,16 +183,26 @@ export class PasswordService {
       passwordStatus: {
         isSet: true,
         failedAttempts: 0,
-        lockedUntil: 0
-      }
+        lockedUntil: 0,
+      },
     });
 
     // 缓存到内存
     this.masterKey = password;
     // 同步到 sessionStorage，供 Popup 等组件使用（仅页面上下文可用）
-    try { sessionStorage.setItem('masterKey', password); } catch { /* service worker 无 sessionStorage */ }
-  }
+    try {
+      sessionStorage.setItem("masterKey", password);
+    } catch {
+      /* service worker 无 sessionStorage */
+    }
 
+    // 同步更新 SessionService 会话状态为已解锁
+    try {
+      await SessionService.markUnlocked(password);
+    } catch {
+      /* 忽略 SessionService 同步错误 */
+    }
+  }
   /**
    * 验证主密码
    * @param password 用户输入的密码
@@ -199,37 +215,48 @@ export class PasswordService {
     await this.checkLockStatus();
 
     // 获取存储的密码哈希
-    const data = await this.getStorageData<string>(['passwordHash']);
+    const data = await this.getStorageData<string>(["passwordHash"]);
     const storedHash = data.passwordHash;
 
     if (!storedHash) {
-      throw new PasswordError('主密码未设置');
+      throw new PasswordError("主密码未设置");
     }
 
     // 验证密码
     const isValid = await EncryptionService.verifyPasswordHash(
       password,
-      storedHash
+      storedHash,
     );
 
     if (isValid) {
       // 验证成功：缓存密钥并重置失败次数
       this.masterKey = password;
-      try { sessionStorage.setItem('masterKey', password); } catch { /* service worker 无 sessionStorage */ }
+      try {
+        sessionStorage.setItem("masterKey", password);
+      } catch {
+        /* service worker 无 sessionStorage */
+      }
       await this.resetFailedAttempts();
+
+      // 同步更新 SessionService 会话状态为已解锁
+      try {
+        await SessionService.markUnlocked(password);
+      } catch {
+        /* 忽略 SessionService 同步错误 */
+      }
       return true;
     } else {
       // 验证失败：记录失败次数
       await this.recordFailedAttempt();
       const status = await this.getPasswordStatus();
-      
+
       // 计算剩余尝试次数
       const remainingAttempts = Math.max(
         0,
-        this.LOCK_THRESHOLD_2 - status.failedAttempts
+        this.LOCK_THRESHOLD_2 - status.failedAttempts,
       );
 
-      throw new InvalidPasswordError('密码错误', remainingAttempts);
+      throw new InvalidPasswordError("密码错误", remainingAttempts);
     }
   }
 
@@ -242,18 +269,77 @@ export class PasswordService {
   }
 
   /**
-   * 检查是否已解锁
+   * 检查是否已解锁（同步，仅检查内存）
    */
   static isUnlocked(): boolean {
     return this.masterKey !== null;
   }
 
   /**
+   * 异步检查并恢复会话状态
+   * 通过 SessionService（chrome.storage.session）检查会话是否仍然有效，
+   * 并结合 autoLockMinutes 配置判断是否超时。
+   * 如果会话有效，尝试从 sessionStorage 恢复 masterKey。
+   * @returns 是否已解锁
+   */
+  static async checkAndRestoreSession(): Promise<boolean> {
+    // 1. 内存中已有密钥，直接返回
+    if (this.masterKey !== null) {
+      return true;
+    }
+
+    try {
+      // 2. 检查 SessionService 会话状态（chrome.storage.session，跨页面持久化）
+      const isLocked = await SessionService.isLocked();
+      if (isLocked) {
+        return false;
+      }
+
+      // 3. 会话未锁定，检查是否已超时（基于 autoLockMinutes 配置）
+      const lockSettings = await LockService.getLockSettings();
+      const isExpired = await SessionService.isSessionExpired(
+        lockSettings.autoLockMinutes,
+      );
+      if (isExpired) {
+        // 会话已超时，执行锁定
+        await SessionService.lock();
+        return false;
+      }
+
+      // 4. 会话有效，尝试从 chrome.storage.session 恢复 masterKey
+      const sessionKey = await SessionService.getSessionKey();
+      if (sessionKey) {
+        this.masterKey = sessionKey;
+        // 同步到 sessionStorage（仅当前页面上下文）
+        try {
+          sessionStorage.setItem("masterKey", sessionKey);
+        } catch {
+          /* service worker 无 sessionStorage */
+        }
+        return true;
+      }
+
+      // 5. chrome.storage.session 中也没有 masterKey，
+      //    但 SessionService 显示未锁定 → 需要用户重新输入密码
+      return false;
+    } catch (error) {
+      console.error("检查会话状态失败:", error);
+      return false;
+    }
+  }
+
+  /**
    * 锁定（清除内存中的密钥）
    */
-  static lock(): void {
+  static async lock(): Promise<void> {
     this.masterKey = null;
-    try { sessionStorage.removeItem('masterKey'); } catch { /* service worker 无 sessionStorage */ }
+    try {
+      sessionStorage.removeItem("masterKey");
+    } catch {
+      /* service worker 无 sessionStorage */
+    }
+    // 同步更新 SessionService 会话状态为已锁定
+    await SessionService.lock();
   }
 
   /**
@@ -265,7 +351,7 @@ export class PasswordService {
    */
   static async changeMasterPassword(
     oldPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<void> {
     // 验证旧密码
     await this.verifyMasterPassword(oldPassword);
@@ -278,7 +364,7 @@ export class PasswordService {
 
     // 更新存储
     await this.setStorageData({
-      passwordHash: newPasswordHash
+      passwordHash: newPasswordHash,
     });
 
     // 更新内存中的密钥

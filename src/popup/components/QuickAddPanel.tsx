@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import type { AddBookmarkInput } from '@/types/bookmark';
-import type { Folder } from '@/types/data';
-import { useCurrentTab } from '../hooks/useCurrentTab';
-import { isValidUrl } from '@/utils/helpers';
-import './QuickAddPanel.css';
+import React, { useState, useEffect } from "react";
+import type { AddBookmarkInput } from "@/types/bookmark";
+import type { Folder } from "@/types/data";
+import { useCurrentTab } from "../hooks/useCurrentTab";
+import { isValidUrl } from "@/utils/helpers";
+import "./QuickAddPanel.css";
 
 /**
  * 快速添加面板组件
@@ -17,19 +17,19 @@ interface QuickAddPanelProps {
   onSave: (data: AddBookmarkInput) => Promise<void>;
 }
 
-export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({ 
-  visible, 
+export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
+  visible,
   folders,
-  onClose, 
-  onSave 
+  onClose,
+  onSave,
 }) => {
   const { currentTab } = useCurrentTab();
-  
-  const [title, setTitle] = useState<string>('');
-  const [url, setUrl] = useState<string>('');
-  const [folderId, setFolderId] = useState<string>('');
-  const [tags, setTags] = useState<string>('');
-  const [note, setNote] = useState<string>('');
+
+  const [title, setTitle] = useState<string>("");
+  const [url, setUrl] = useState<string>("");
+  const [folderId, setFolderId] = useState<string>("");
+  const [tags, setTags] = useState<string>("");
+  const [note, setNote] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<boolean>(false);
 
@@ -43,11 +43,11 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
 
   // 重置表单
   const resetForm = () => {
-    setTitle('');
-    setUrl('');
-    setFolderId('');
-    setTags('');
-    setNote('');
+    setTitle("");
+    setUrl("");
+    setFolderId("");
+    setTags("");
+    setNote("");
     setErrors({});
   };
 
@@ -56,13 +56,13 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
     const newErrors: Record<string, string> = {};
 
     if (!title.trim()) {
-      newErrors.title = '标题不能为空';
+      newErrors.title = "标题不能为空";
     }
 
     if (!url.trim()) {
-      newErrors.url = 'URL 不能为空';
+      newErrors.url = "URL 不能为空";
     } else if (!isValidUrl(url)) {
-      newErrors.url = '请输入有效的 URL (http:// 或 https://)';
+      newErrors.url = "请输入有效的 URL (http:// 或 https://)";
     }
 
     setErrors(newErrors);
@@ -78,27 +78,29 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
 
       // 处理标签（逗号分隔）
       const tagArray = tags
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter((tag) => tag.length > 0);
 
       await onSave({
         title,
         url,
         folderId: folderId || undefined,
         tags: tagArray,
-        note: note || undefined
+        note: note || undefined,
       });
 
       // 成功提示
-      showToast('书签已保存');
+      showToast("书签已保存");
 
       // 重置并关闭
       resetForm();
       setTimeout(onClose, 1500);
     } catch (error) {
-      console.error('保存书签失败:', error);
-      setErrors({ general: error instanceof Error ? error.message : '保存失败' });
+      console.error("保存书签失败:", error);
+      setErrors({
+        general: error instanceof Error ? error.message : "保存失败",
+      });
     } finally {
       setSaving(false);
     }
@@ -106,17 +108,17 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
 
   // Toast 提示
   const showToast = (message: string) => {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
+    const toast = document.createElement("div");
+    toast.className = "toast";
     toast.textContent = message;
     document.body.appendChild(toast);
 
     setTimeout(() => {
-      toast.classList.add('show');
+      toast.classList.add("show");
     }, 10);
 
     setTimeout(() => {
-      toast.classList.remove('show');
+      toast.classList.remove("show");
       setTimeout(() => toast.remove(), 300);
     }, 2000);
   };
@@ -131,43 +133,45 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
 
   return (
     <div className="quick-add-panel">
-      <div className="overlay" onClick={handleClose} />
+      <div className="quick-add-overlay" onClick={handleClose} />
 
-      <div className="panel-content">
-        <h3>添加书签</h3>
+      <div className="quick-add-content">
+        <h3 className="quick-add-title">添加书签</h3>
 
         {/* 标题 */}
-        <div className="form-group">
-          <label htmlFor="title">标题 *</label>
+        <div className="quick-add-field">
+          <label htmlFor="qa-title">标题 *</label>
           <input
-            id="title"
+            id="qa-title"
             type="text"
             placeholder="请输入书签标题"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             autoFocus
           />
-          {errors.title && <span className="error-text">{errors.title}</span>}
+          {errors.title && (
+            <span className="quick-add-error">{errors.title}</span>
+          )}
         </div>
 
         {/* URL */}
-        <div className="form-group">
-          <label htmlFor="url">URL *</label>
+        <div className="quick-add-field">
+          <label htmlFor="qa-url">URL *</label>
           <input
-            id="url"
+            id="qa-url"
             type="text"
             placeholder="https://example.com"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
-          {errors.url && <span className="error-text">{errors.url}</span>}
+          {errors.url && <span className="quick-add-error">{errors.url}</span>}
         </div>
 
         {/* 文件夹 */}
-        <div className="form-group">
-          <label htmlFor="folder">文件夹</label>
+        <div className="quick-add-field">
+          <label htmlFor="qa-folder">文件夹</label>
           <select
-            id="folder"
+            id="qa-folder"
             value={folderId}
             onChange={(e) => setFolderId(e.target.value)}
           >
@@ -181,10 +185,10 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
         </div>
 
         {/* 标签 */}
-        <div className="form-group">
-          <label htmlFor="tags">标签（逗号分隔）</label>
+        <div className="quick-add-field">
+          <label htmlFor="qa-tags">标签（逗号分隔）</label>
           <input
-            id="tags"
+            id="qa-tags"
             type="text"
             placeholder="例如: 工作, 技术, 学习"
             value={tags}
@@ -193,10 +197,10 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
         </div>
 
         {/* 备注 */}
-        <div className="form-group">
-          <label htmlFor="note">备注</label>
+        <div className="quick-add-field">
+          <label htmlFor="qa-note">备注</label>
           <textarea
-            id="note"
+            id="qa-note"
             placeholder="可选的备注信息"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -206,14 +210,14 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
 
         {/* 通用错误 */}
         {errors.general && (
-          <div className="error-message">{errors.general}</div>
+          <div className="quick-add-general-error">{errors.general}</div>
         )}
 
         {/* 操作按钮 */}
-        <div className="actions">
+        <div className="quick-add-actions">
           <button
             type="button"
-            className="btn-cancel"
+            className="quick-add-btn-cancel"
             onClick={handleClose}
             disabled={saving}
           >
@@ -221,11 +225,11 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
           </button>
           <button
             type="button"
-            className="btn-save"
+            className="quick-add-btn-save"
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? '保存中...' : '保存'}
+            {saving ? "保存中..." : "保存"}
           </button>
         </div>
       </div>

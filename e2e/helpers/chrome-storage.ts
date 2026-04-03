@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page } from "@playwright/test";
 
 /**
  * Chrome Storage 测试辅助类
@@ -8,10 +8,13 @@ export class ChromeStorageHelper {
   constructor(private page: Page) {}
 
   /**
-   * 清空所有存储数据
+   * 清空所有存储数据（包括 chrome.storage.local 和 chrome.storage.session）
    */
   async clear(): Promise<void> {
-    await this.page.evaluate(() => chrome.storage.local.clear());
+    await this.page.evaluate(async () => {
+      await chrome.storage.local.clear();
+      await chrome.storage.session.clear();
+    });
   }
 
   /**
@@ -43,7 +46,7 @@ export class ChromeStorageHelper {
    * @param passwordHash 密码哈希（可选，使用默认测试哈希）
    */
   async setupPasswordSet(passwordHash?: string): Promise<void> {
-    const hash = passwordHash || 'test-password-hash-for-testing';
+    const hash = passwordHash || "test-password-hash-for-testing";
     await this.set({
       passwordHash: hash,
       passwordStatus: {
@@ -59,9 +62,12 @@ export class ChromeStorageHelper {
    * @param failedAttempts 失败次数
    * @param lockedUntilSeconds 锁定时长（秒）
    */
-  async setupLockedState(failedAttempts: number, lockedUntilSeconds: number): Promise<void> {
+  async setupLockedState(
+    failedAttempts: number,
+    lockedUntilSeconds: number,
+  ): Promise<void> {
     await this.set({
-      passwordHash: 'test-password-hash',
+      passwordHash: "test-password-hash",
       passwordStatus: {
         isSet: true,
         failedAttempts,
@@ -78,12 +84,14 @@ export class ChromeStorageHelper {
     failedAttempts: number;
     lockedUntil: number;
   } | null> {
-    const data = await this.get(['passwordHash', 'passwordStatus']);
-    const status = data.passwordStatus as {
-      isSet: boolean;
-      failedAttempts: number;
-      lockedUntil: number;
-    } | undefined;
+    const data = await this.get(["passwordHash", "passwordStatus"]);
+    const status = data.passwordStatus as
+      | {
+          isSet: boolean;
+          failedAttempts: number;
+          lockedUntil: number;
+        }
+      | undefined;
 
     if (!status) return null;
 

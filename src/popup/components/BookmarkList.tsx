@@ -1,10 +1,10 @@
-import React from 'react';
-import { List } from 'react-window';
-import type { Bookmark } from '@/types/data';
-import { BookmarkItem } from './BookmarkItem';
-import { LoadingState } from './LoadingState';
-import { EmptyState } from './EmptyState';
-import './BookmarkList.css';
+import React from "react";
+import { List } from "react-window";
+import type { Bookmark } from "@/types/data";
+import { BookmarkItem } from "./BookmarkItem";
+import { LoadingState } from "./LoadingState";
+import { EmptyState } from "./EmptyState";
+import "./BookmarkList.css";
 
 /**
  * 书签列表组件
@@ -19,12 +19,12 @@ interface BookmarkListProps {
   onDelete?: (id: string) => void;
 }
 
-export const BookmarkList: React.FC<BookmarkListProps> = ({ 
-  bookmarks, 
-  loading, 
+export const BookmarkList: React.FC<BookmarkListProps> = ({
+  bookmarks,
+  loading,
   searchKeyword,
   onEdit,
-  onDelete
+  onDelete,
 }) => {
   // 加载状态
   if (loading) {
@@ -33,25 +33,21 @@ export const BookmarkList: React.FC<BookmarkListProps> = ({
 
   // 空状态
   if (bookmarks.length === 0) {
-    return (
-      <EmptyState 
-        type={searchKeyword ? 'no-results' : 'no-bookmarks'}
-      />
-    );
+    return <EmptyState type={searchKeyword ? "no-results" : "no-bookmarks"} />;
   }
 
   // 虚拟滚动行渲染组件
-  const RowComponent = ({ 
-    index, 
-    style, 
-    ariaAttributes 
-  }: { 
-    index: number; 
+  const RowComponent = ({
+    index,
+    style,
+    ariaAttributes,
+  }: {
+    index: number;
     style: React.CSSProperties;
     ariaAttributes: {
-      'aria-posinset': number;
-      'aria-setsize': number;
-      role: 'listitem';
+      "aria-posinset": number;
+      "aria-setsize": number;
+      role: "listitem";
     };
   }) => (
     <div style={style} {...ariaAttributes}>
@@ -69,7 +65,7 @@ export const BookmarkList: React.FC<BookmarkListProps> = ({
       <List
         defaultHeight={500}
         rowCount={bookmarks.length}
-        rowHeight={80}
+        rowHeight={76}
         rowComponent={RowComponent}
         rowProps={{}}
       >

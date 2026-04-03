@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { PasswordService } from '@/services';
-import { InvalidPasswordError, AccountLockedError } from '@/types';
-import ImportSection from './ImportSection';
-import ExportSection from './ExportSection';
-import './SettingsPanel.css';
+import React, { useState, useEffect } from "react";
+import { PasswordService } from "@/services";
+import { SessionService } from "@/services/SessionService";
+import { InvalidPasswordError, AccountLockedError } from "@/types";
+import ImportSection from "./ImportSection";
+import ExportSection from "./ExportSection";
+import "./SettingsPanel.css";
 
 interface ImportExportPanelProps {
-  onMessage: (message: string, type: 'success' | 'error') => void;
+  onMessage: (message: string, type: "success" | "error") => void;
 }
 
 /**
@@ -14,30 +15,41 @@ interface ImportExportPanelProps {
  * 集成导入和导出功能
  */
 const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
-  const [masterKey, setMasterKey] = useState<string>('');
-  const [unlockPassword, setUnlockPassword] = useState('');
-  const [unlockError, setUnlockError] = useState('');
+  const [masterKey, setMasterKey] = useState<string>("");
+  const [unlockPassword, setUnlockPassword] = useState("");
+  const [unlockError, setUnlockError] = useState("");
   const [unlocking, setUnlocking] = useState(false);
 
-  // 获取 masterKey
+  // 获取 masterKey：优先通过 SessionService 检查会话状态，再从 chrome.storage.session 恢复
   useEffect(() => {
-    const key = sessionStorage.getItem('masterKey');
-    if (key) {
-      setMasterKey(key);
-    }
+    const restoreSession = async () => {
+      const unlocked = await PasswordService.checkAndRestoreSession();
+      if (unlocked) {
+        // 会话有效，从 SessionService 获取 masterKey
+        const key = await SessionService.getSessionKey();
+        if (key) {
+          setMasterKey(key);
+        }
+      }
+    };
+    restoreSession();
   }, []);
 
   // 解锁
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUnlockError('');
+    setUnlockError("");
     setUnlocking(true);
 
     try {
       await PasswordService.verifyMasterPassword(unlockPassword);
-      setUnlockPassword('');
+      setUnlockPassword("");
       // 同步到 sessionStorage
-      try { sessionStorage.setItem('masterKey', unlockPassword); } catch { /* ignore */ }
+      try {
+        sessionStorage.setItem("masterKey", unlockPassword);
+      } catch {
+        /* ignore */
+      }
       setMasterKey(unlockPassword);
     } catch (err) {
       if (err instanceof InvalidPasswordError) {
@@ -46,7 +58,7 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
         const seconds = Math.ceil((err.lockedUntil - Date.now()) / 1000);
         setUnlockError(`账户已锁定，请在 ${seconds} 秒后重试`);
       } else {
-        setUnlockError(err instanceof Error ? err.message : '解锁失败');
+        setUnlockError(err instanceof Error ? err.message : "解锁失败");
       }
     } finally {
       setUnlocking(false);
@@ -65,7 +77,11 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
           <div className="info-box">
             <p>⚠️ 请先登录后再使用导入导出功能</p>
           </div>
-          <form onSubmit={handleUnlock} className="unlock-form" style={{ marginTop: 16 }}>
+          <form
+            onSubmit={handleUnlock}
+            className="unlock-form"
+            style={{ marginTop: 16 }}
+          >
             <div className="form-group">
               <label htmlFor="options-unlock-password">主密码</label>
               <input
@@ -79,8 +95,12 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
               />
             </div>
             {unlockError && <div className="error">{unlockError}</div>}
-            <button type="submit" className="btn btn-primary" disabled={unlocking || !unlockPassword}>
-              {unlocking ? '验证中...' : '解锁'}
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={unlocking || !unlockPassword}
+            >
+              {unlocking ? "验证中..." : "解锁"}
             </button>
           </form>
         </div>
@@ -157,7 +177,8 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
             <details className="faq-item">
               <summary>导出的 PBM 文件可以用在其他设备吗？</summary>
               <p>
-                可以。PBM 是本插件的专用备份格式，包含完整的书签、文件夹和标签数据。
+                可以。PBM
+                是本插件的专用备份格式，包含完整的书签、文件夹和标签数据。
                 只需在其他设备安装本插件，导入 PBM 文件即可恢复所有数据。
               </p>
             </details>

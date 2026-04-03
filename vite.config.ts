@@ -1,25 +1,26 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { crx } from '@crxjs/vite-plugin';
-import manifest from './src/manifest.json';
-import path from 'path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { crx } from "@crxjs/vite-plugin";
+import manifest from "./src/manifest.json";
+import path from "path";
+import pkg from "./package.json";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    crx({ manifest })
-  ],
+  plugins: [react(), crx({ manifest })],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
+      "@": path.resolve(__dirname, "./src"),
+    },
   },
   build: {
     rollupOptions: {
       input: {
-        popup: 'src/popup/index.html',
-        options: 'src/options/index.html'
-      }
-    }
-  }
+        popup: "src/popup/index.html",
+        options: "src/options/index.html",
+      },
+    },
+  },
 });

@@ -1,0 +1,37 @@
+/* 标签列表样式 */
+
+.tag-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 滚动条样式 */
+.tag-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tag-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tag-list::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 2px;
+}
+
+.tag-list::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* 空标签提示 */
+.tag-list-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+}
+
+.tag-list-empty-text {
+  font-size: 12px;
+  color: #9CA3AF;
+}

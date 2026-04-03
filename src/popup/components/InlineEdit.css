@@ -1,0 +1,48 @@
+/* 行内编辑样式 */
+
+.inline-edit {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.inline-edit-input {
+  width: 100%;
+  padding: 2px 6px;
+  font-size: 13px;
+  border: 1px solid #4F46E5;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.inline-edit-input:focus {
+  border-color: #4F46E5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+.inline-edit-input.has-error {
+  border-color: #EF4444;
+}
+
+.inline-edit-input.has-error:focus {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.inline-edit-error {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #EF4444;
+  white-space: nowrap;
+  z-index: 10;
+  background: #ffffff;
+  padding: 2px 4px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}

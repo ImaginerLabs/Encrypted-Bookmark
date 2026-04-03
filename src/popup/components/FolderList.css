@@ -1,15 +1,13 @@
 /* 文件夹列表样式 */
 
 .folder-list {
-  width: 150px;
-  border-right: 1px solid #e0e0e0;
+  flex: 1;
   overflow-y: auto;
-  background: #fafafa;
 }
 
 /* 滚动条样式 */
 .folder-list::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .folder-list::-webkit-scrollbar-track {
@@ -17,10 +15,60 @@
 }
 
 .folder-list::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
+  background: #D1D5DB;
+  border-radius: 2px;
 }
 
 .folder-list::-webkit-scrollbar-thumb:hover {
-  background: #999;
+  background: #9CA3AF;
+}
+
+/* 新建文件夹输入行 */
+.folder-create-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+.folder-create-row .folder-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* 新建文件夹按钮 */
+.folder-create-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #6B7280;
+  font-size: 13px;
+}
+
+.folder-create-btn:hover {
+  background: rgba(79, 70, 229, 0.05);
+  color: #4F46E5;
+}
+
+.folder-create-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.folder-create-text {
+  font-size: 12px;
+  font-weight: 500;
 }

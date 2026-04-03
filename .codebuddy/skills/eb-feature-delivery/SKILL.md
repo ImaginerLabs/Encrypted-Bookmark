@@ -24,6 +24,7 @@ description: >
 ## 触发条件
 
 当用户提出新功能需求或改进需求时触发，例如：
+
 - "新增书签分组功能"
 - "支持快捷键操作"
 - "优化搜索体验"
@@ -152,10 +153,13 @@ description: >
 ### CHANGELOG.md
 在文件顶部新增版本记录，格式遵循 Keep a Changelog 规范：
 ```
+
 ## [X.X.X] - YYYY-MM-DD
 
 ### Added / Changed / Fixed
+
 - 功能变更描述
+
 ```
 
 ### README.md
@@ -167,10 +171,15 @@ description: >
 - 如果有新功能影响用户操作 → 在对应章节补充说明
 - 如果有新的设置项 → 更新设置页面说明
 
+### package.json 版本号同步
+- 读取 CHANGELOG.md 最新版本号（即刚刚新增的 `[X.X.X]`）
+- 将 `package.json` 中的 `version` 字段更新为该版本号，确保两者一致
+- 如果项目存在 `package-lock.json`，同步更新其顶层 `version` 字段
+
 3. 保持文档风格与现有内容一致
 ```
 
-**产出**：`CHANGELOG.md`、`README.md`、`docs/` 的增量更新
+**产出**：`CHANGELOG.md`、`README.md`、`docs/`、`package.json` 的增量更新
 
 ---
 
@@ -184,9 +193,9 @@ description: >
 
 ## Agent 角色映射
 
-| 阶段 | subagent_name | 职责 |
-|------|--------------|------|
-| 需求分析 | `通用产品经理` | 调研项目现状，出具 PRD |
+| 阶段     | subagent_name      | 职责                       |
+| -------- | ------------------ | -------------------------- |
+| 需求分析 | `通用产品经理`     | 调研项目现状，出具 PRD     |
 | 开发实现 | `通用资深前端研发` | 按 PRD 开发功能 + E2E 测试 |
-| 测试验证 | `通用资深测试` | 运行 E2E 测试，验证质量 |
+| 测试验证 | `通用资深测试`     | 运行 E2E 测试，验证质量    |
 | 文档沉淀 | `通用资深前端研发` | 更新 CHANGELOG/README/docs |

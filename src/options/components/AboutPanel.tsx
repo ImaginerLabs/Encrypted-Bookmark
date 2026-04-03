@@ -1,46 +1,43 @@
-import React from 'react';
-import './SettingsPanel.css';
+import React from "react";
+import "./SettingsPanel.css";
 
 interface AboutPanelProps {
-  onMessage: (message: string, type: 'success' | 'error') => void;
+  onMessage: (message: string, type: "success" | "error") => void;
 }
 
 /**
  * 关于面板
  */
 const AboutPanel: React.FC<AboutPanelProps> = ({ onMessage }) => {
-  const version = '1.0.0';
+  const version = __APP_VERSION__;
 
   const handleResetAll = async () => {
     const confirmed = window.confirm(
-      '⚠️ 危险操作！\n\n' +
-      '这将清除所有数据，包括：\n' +
-      '- 主密码\n' +
-      '- 所有书签\n' +
-      '- 所有文件夹\n' +
-      '- 所有标签\n' +
-      '- 所有设置\n\n' +
-      '此操作不可恢复，确定要继续吗？'
+      "⚠️ 危险操作！\n\n" +
+        "这将清除所有数据，包括：\n" +
+        "- 主密码\n" +
+        "- 所有书签\n" +
+        "- 所有文件夹\n" +
+        "- 所有标签\n" +
+        "- 所有设置\n\n" +
+        "此操作不可恢复，确定要继续吗？",
     );
 
     if (!confirmed) return;
 
-    const doubleConfirm = window.confirm('请再次确认：是否要删除所有数据？');
+    const doubleConfirm = window.confirm("请再次确认：是否要删除所有数据？");
     if (!doubleConfirm) return;
 
     try {
       await chrome.storage.local.clear();
       await chrome.storage.session.clear();
-      onMessage('所有数据已清除，页面将在3秒后刷新', 'success');
-      
+      onMessage("所有数据已清除，页面将在3秒后刷新", "success");
+
       setTimeout(() => {
         window.location.reload();
       }, 3000);
     } catch (error) {
-      onMessage(
-        error instanceof Error ? error.message : '重置失败',
-        'error'
-      );
+      onMessage(error instanceof Error ? error.message : "重置失败", "error");
     }
   };
 
@@ -50,7 +47,7 @@ const AboutPanel: React.FC<AboutPanelProps> = ({ onMessage }) => {
 
       <div className="about-content">
         <div className="app-icon">🔐</div>
-        
+
         <h2 className="app-name">Encrypted Bookmark</h2>
         <p className="app-version">版本 {version}</p>
         <p className="app-tagline">本地优先、隐私至上的书签管理工具</p>
@@ -114,10 +111,7 @@ const AboutPanel: React.FC<AboutPanelProps> = ({ onMessage }) => {
           <p className="danger-warning">
             以下操作将清除所有数据且不可恢复，请谨慎操作
           </p>
-          <button
-            className="btn btn-danger"
-            onClick={handleResetAll}
-          >
+          <button className="btn btn-danger" onClick={handleResetAll}>
             重置所有数据
           </button>
         </div>

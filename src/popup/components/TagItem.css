@@ -1,0 +1,64 @@
+/* 标签项样式 */
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+  gap: 8px;
+}
+
+.tag-item:hover {
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.tag-item.selected {
+  background: rgba(79, 70, 229, 0.1);
+  color: #4F46E5;
+  font-weight: 500;
+}
+
+.tag-item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.tag-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-item-name {
+  font-size: 13px;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-item.selected .tag-item-name {
+  color: #4F46E5;
+}
+
+.tag-usage-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6B7280;
+  background: #E5E7EB;
+  padding: 1px 6px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.tag-item.selected .tag-usage-badge {
+  background: rgba(79, 70, 229, 0.15);
+  color: #4F46E5;
+}

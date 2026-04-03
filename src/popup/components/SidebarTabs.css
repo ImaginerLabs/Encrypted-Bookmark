@@ -1,0 +1,46 @@
+/* 侧边栏 Tab 切换样式 */
+
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #E5E7EB;
+  background: #F3F4F6;
+  flex-shrink: 0;
+}
+
+.sidebar-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6B7280;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sidebar-tab:hover {
+  color: #4F46E5;
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.sidebar-tab.active {
+  color: #4F46E5;
+  border-bottom-color: #4F46E5;
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.sidebar-tab-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.sidebar-tab-label {
+  font-size: 12px;
+  white-space: nowrap;
+}

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import './SearchBox.css';
+import React, { useState } from "react";
+import "./SearchBox.css";
 
 /**
  * 搜索框组件
- * 支持实时搜索和清空功能
+ * 支持实时搜索、清空功能，带搜索图标前缀
  */
 
 interface SearchBoxProps {
@@ -11,7 +11,7 @@ interface SearchBoxProps {
 }
 
 export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch }) => {
-  const [keyword, setKeyword] = useState<string>('');
+  const [keyword, setKeyword] = useState<string>("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -20,12 +20,13 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch }) => {
   };
 
   const handleClear = () => {
-    setKeyword('');
-    onSearch('');
+    setKeyword("");
+    onSearch("");
   };
 
   return (
     <div className="search-box">
+      <span className="search-icon">🔍</span>
       <input
         type="text"
         className="search-input"
@@ -34,7 +35,11 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSearch }) => {
         onChange={handleChange}
       />
       {keyword && (
-        <button className="clear-btn" onClick={handleClear} aria-label="清空搜索">
+        <button
+          className="clear-btn"
+          onClick={handleClear}
+          aria-label="清空搜索"
+        >
           ✕
         </button>
       )}

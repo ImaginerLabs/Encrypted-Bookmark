@@ -1,5 +1,5 @@
-import type { LockSettings } from '@/types/auth';
-import { SessionService } from './SessionService';
+import type { LockSettings } from "@/types/auth";
+import { SessionService } from "./SessionService";
 
 /**
  * 自动锁定服务
@@ -7,10 +7,10 @@ import { SessionService } from './SessionService';
  */
 export class LockService {
   /** 存储键: 锁定设置 */
-  private static readonly STORAGE_KEY_LOCK_SETTINGS = 'lock_settings';
+  private static readonly STORAGE_KEY_LOCK_SETTINGS = "lock_settings";
 
-  /** 默认自动锁定时间 (分钟) */
-  private static readonly DEFAULT_LOCK_MINUTES = 30;
+  /** 默认自动锁定时间 (分钟)，与 SettingsService 默认值保持一致 */
+  private static readonly DEFAULT_LOCK_MINUTES = 15;
 
   /** 定时器 ID */
   private static timerId: number | null = null;
@@ -31,7 +31,7 @@ export class LockService {
   static async getLockSettings(): Promise<LockSettings> {
     try {
       const result = await chrome.storage.local.get(
-        this.STORAGE_KEY_LOCK_SETTINGS
+        this.STORAGE_KEY_LOCK_SETTINGS,
       );
       const settings = result[this.STORAGE_KEY_LOCK_SETTINGS] as
         | LockSettings
@@ -41,15 +41,15 @@ export class LockService {
         settings || {
           autoLockMinutes: this.DEFAULT_LOCK_MINUTES,
           lockOnBrowserClose: true,
-          reminderSeconds: [300, 60, 30] // 5分钟、1分钟、30秒前提醒
+          reminderSeconds: [300, 60, 30], // 5分钟、1分钟、30秒前提醒
         }
       );
     } catch (error) {
-      console.error('Failed to get lock settings:', error);
+      console.error("Failed to get lock settings:", error);
       return {
         autoLockMinutes: this.DEFAULT_LOCK_MINUTES,
         lockOnBrowserClose: true,
-        reminderSeconds: [300, 60, 30]
+        reminderSeconds: [300, 60, 30],
       };
     }
   }
@@ -61,10 +61,10 @@ export class LockService {
   static async saveLockSettings(settings: LockSettings): Promise<void> {
     try {
       await chrome.storage.local.set({
-        [this.STORAGE_KEY_LOCK_SETTINGS]: settings
+        [this.STORAGE_KEY_LOCK_SETTINGS]: settings,
       });
     } catch (error) {
-      console.error('Failed to save lock settings:', error);
+      console.error("Failed to save lock settings:", error);
     }
   }
 
@@ -204,7 +204,7 @@ export class LockService {
    * 在页面/popup 中调用，用于重置计时器
    */
   static startActivityListeners(): void {
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
 
     const handleActivity = () => {
       void this.resetTimer();
@@ -242,7 +242,7 @@ export class LockService {
   static async checkSessionTimeout(): Promise<void> {
     const settings = await this.getLockSettings();
     const isExpired = await SessionService.isSessionExpired(
-      settings.autoLockMinutes
+      settings.autoLockMinutes,
     );
 
     if (isExpired) {

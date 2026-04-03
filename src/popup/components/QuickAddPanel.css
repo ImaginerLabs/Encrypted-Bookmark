@@ -7,152 +7,172 @@
   width: 100%;
   height: 100%;
   z-index: 999;
+  animation: quickAddFadeIn 0.15s ease-out;
 }
 
-.overlay {
+@keyframes quickAddFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.quick-add-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
 }
 
-.panel-content {
+.quick-add-content {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 90%;
-  max-width: 360px;
+  max-width: 340px;
   max-height: 90%;
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   overflow-y: auto;
+  animation: quickAddSlideIn 0.15s ease-out;
 }
 
-.panel-content h3 {
+@keyframes quickAddSlideIn {
+  from {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.quick-add-title {
   margin: 0 0 16px;
-  font-size: 18px;
-  color: #333;
-  font-weight: 500;
+  font-size: 16px;
+  color: #111827;
+  font-weight: 600;
 }
 
-/* 表单组 */
-.form-group {
-  margin-bottom: 16px;
+/* 表单字段 */
+.quick-add-field {
+  margin-bottom: 14px;
 }
 
-.form-group label {
+.quick-add-field label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-size: 13px;
-  color: #666;
+  color: #374151;
   font-weight: 500;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.quick-add-field input,
+.quick-add-field select,
+.quick-add-field textarea {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-size: 13px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
+  color: #111827;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: #1976d2;
+.quick-add-field input:focus,
+.quick-add-field select:focus,
+.quick-add-field textarea:focus {
+  border-color: #4F46E5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
-.form-group textarea {
+.quick-add-field textarea {
   resize: vertical;
 }
 
 /* 错误提示 */
-.error-text {
+.quick-add-error {
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: #f44336;
+  color: #EF4444;
 }
 
-.error-message {
-  padding: 12px;
-  margin-bottom: 16px;
-  background: #ffebee;
-  color: #f44336;
-  border-radius: 4px;
+.quick-add-general-error {
+  padding: 10px;
+  margin-bottom: 14px;
+  background: #FEF2F2;
+  color: #EF4444;
+  border-radius: 8px;
   font-size: 13px;
 }
 
 /* 操作按钮 */
-.actions {
+.quick-add-actions {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #F3F4F6;
 }
 
-.btn-cancel,
-.btn-save {
-  padding: 8px 20px;
+.quick-add-btn-cancel,
+.quick-add-btn-save {
+  padding: 8px 18px;
   border: none;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.btn-cancel {
-  background: #f5f5f5;
-  color: #666;
+.quick-add-btn-cancel {
+  background: #F3F4F6;
+  color: #6B7280;
 }
 
-.btn-cancel:hover {
-  background: #e8e8e8;
+.quick-add-btn-cancel:hover {
+  background: #E5E7EB;
 }
 
-.btn-save {
-  background: #1976d2;
+.quick-add-btn-save {
+  background: #4F46E5;
   color: #ffffff;
 }
 
-.btn-save:hover {
-  background: #1565c0;
+.quick-add-btn-save:hover {
+  background: #4338CA;
 }
 
-.btn-save:disabled,
-.btn-cancel:disabled {
+.quick-add-btn-save:disabled,
+.quick-add-btn-cancel:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* 滚动条样式 */
-.panel-content::-webkit-scrollbar {
-  width: 6px;
+.quick-add-content::-webkit-scrollbar {
+  width: 4px;
 }
 
-.panel-content::-webkit-scrollbar-track {
+.quick-add-content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.panel-content::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
+.quick-add-content::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 2px;
 }
 
-.panel-content::-webkit-scrollbar-thumb:hover {
-  background: #999;
+.quick-add-content::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
 }

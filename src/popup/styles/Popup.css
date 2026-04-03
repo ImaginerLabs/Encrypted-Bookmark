@@ -6,40 +6,91 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #ffffff;
+  background: #F9FAFB;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
-/* 顶部搜索栏 */
-.popup-header {
+/* 顶部标题栏 */
+.popup-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
+}
+
+.popup-titlebar-brand {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  letter-spacing: -0.3px;
+}
+
+.popup-titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.popup-titlebar-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+  line-height: 1;
+}
+
+.popup-titlebar-btn:hover {
+  background: #F3F4F6;
+}
+
+.popup-titlebar-btn:active {
+  background: #E5E7EB;
+}
+
+/* 搜索栏 */
+.popup-searchbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #fafafa;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #E5E7EB;
+  flex-shrink: 0;
 }
 
 .btn-quick-add {
   width: 36px;
   height: 36px;
   border: none;
-  border-radius: 4px;
-  background: #1976d2;
+  border-radius: 8px;
+  background: #4F46E5;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
   cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-quick-add:hover {
-  background: #1565c0;
+  background: #4338CA;
 }
 
 .btn-quick-add:active {
-  background: #0d47a1;
+  background: #3730A3;
 }
 
 /* 主体内容区 */
@@ -50,34 +101,31 @@
   min-height: 0;
 }
 
+/* 侧边栏 */
+.popup-sidebar {
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #E5E7EB;
+  background: #F3F4F6;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
 /* 底部状态栏 */
 .popup-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-top: 1px solid #e0e0e0;
-  background: #fafafa;
+  justify-content: center;
+  padding: 8px 12px;
+  border-top: 1px solid #E5E7EB;
+  background: #ffffff;
+  flex-shrink: 0;
 }
 
 .bookmark-count {
-  font-size: 13px;
-  color: #666;
-}
-
-.btn-lock {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 4px;
-  background: #f44336;
-  color: #ffffff;
   font-size: 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-lock:hover {
-  background: #d32f2f;
+  color: #6B7280;
 }
 
 /* Toast 提示 */
@@ -86,14 +134,15 @@
   top: 20px;
   left: 50%;
   transform: translateX(-50%) translateY(-20px);
-  padding: 12px 24px;
-  background: rgba(0, 0, 0, 0.8);
+  padding: 10px 20px;
+  background: #111827;
   color: #ffffff;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 13px;
   opacity: 0;
   transition: opacity 0.3s, transform 0.3s;
   z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .toast.show {
@@ -103,8 +152,8 @@
 
 /* 搜索高亮 */
 mark {
-  background: #ffeb3b;
-  color: #000000;
+  background: #FDE68A;
+  color: #111827;
   padding: 0 2px;
   border-radius: 2px;
 }

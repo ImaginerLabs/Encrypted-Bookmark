@@ -1,5 +1,5 @@
-import type { SessionState, UnlockResult } from '@/types/auth';
-import { AuthService } from './AuthService';
+import type { SessionState, UnlockResult } from "@/types/auth";
+import { AuthService } from "./AuthService";
 
 /**
  * 会话管理服务
@@ -7,7 +7,9 @@ import { AuthService } from './AuthService';
  */
 export class SessionService {
   /** 存储键: 会话状态 */
-  private static readonly STORAGE_KEY_SESSION = 'session_state';
+  private static readonly STORAGE_KEY_SESSION = "session_state";
+  /** 存储键: 会话密钥（存储在 chrome.storage.session 中，跨页面持久化） */
+  private static readonly STORAGE_KEY_SESSION_KEY = "session_key";
 
   /** 内存中的加密密钥 (使用 WeakMap 提高安全性) */
   private static encryptionKeyStore = new WeakMap<object, string>();
@@ -21,9 +23,7 @@ export class SessionService {
   static async getSessionState(): Promise<SessionState> {
     try {
       // 使用 chrome.storage.session (浏览器重启自动清除)
-      const result = await chrome.storage.session.get(
-        this.STORAGE_KEY_SESSION
-      );
+      const result = await chrome.storage.session.get(this.STORAGE_KEY_SESSION);
       const state = result[this.STORAGE_KEY_SESSION] as
         | SessionState
         | undefined;
@@ -32,15 +32,15 @@ export class SessionService {
         state || {
           isLocked: true,
           lastActivityTime: Date.now(),
-          unlockedAt: null
+          unlockedAt: null,
         }
       );
     } catch (error) {
-      console.error('Failed to get session state:', error);
+      console.error("Failed to get session state:", error);
       return {
         isLocked: true,
         lastActivityTime: Date.now(),
-        unlockedAt: null
+        unlockedAt: null,
       };
     }
   }
@@ -52,10 +52,10 @@ export class SessionService {
   private static async saveSessionState(state: SessionState): Promise<void> {
     try {
       await chrome.storage.session.set({
-        [this.STORAGE_KEY_SESSION]: state
+        [this.STORAGE_KEY_SESSION]: state,
       });
     } catch (error) {
-      console.error('Failed to save session state:', error);
+      console.error("Failed to save session state:", error);
     }
   }
 
@@ -89,7 +89,7 @@ export class SessionService {
           lockedUntil: lockStatus.isLocked
             ? Date.now() + lockStatus.remainingSeconds * 1000
             : undefined,
-          error: verifyResult.error
+          error: verifyResult.error,
         };
       }
 
@@ -101,18 +101,60 @@ export class SessionService {
       await this.saveSessionState({
         isLocked: false,
         lastActivityTime: now,
-        unlockedAt: now
+        unlockedAt: now,
       });
 
       return {
-        success: true
+        success: true,
       };
     } catch (error) {
-      console.error('Failed to unlock session:', error);
+      console.error("Failed to unlock session:", error);
       return {
         success: false,
-        error: '解锁失败'
+        error: "解锁失败",
       };
+    }
+  }
+
+  /**
+   * 直接标记会话为已解锁（跳过密码验证）
+   * 用于 PasswordService 已验证密码后同步会话状态
+   * @param masterKey 可选，传入时会将密钥存储到 chrome.storage.session 中
+   */
+  static async markUnlocked(masterKey?: string): Promise<void> {
+    try {
+      const now = Date.now();
+      await this.saveSessionState({
+        isLocked: false,
+        lastActivityTime: now,
+        unlockedAt: now,
+      });
+
+      // 将 masterKey 存储到 chrome.storage.session（跨页面持久化，浏览器重启自动清除）
+      if (masterKey) {
+        await chrome.storage.session.set({
+          [this.STORAGE_KEY_SESSION_KEY]: masterKey,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to mark session as unlocked:", error);
+    }
+  }
+
+  /**
+   * 从 chrome.storage.session 中获取会话密钥
+   * 用于跨页面恢复 masterKey
+   * @returns masterKey 或 null
+   */
+  static async getSessionKey(): Promise<string | null> {
+    try {
+      const result = await chrome.storage.session.get(
+        this.STORAGE_KEY_SESSION_KEY,
+      );
+      return (result[this.STORAGE_KEY_SESSION_KEY] as string) || null;
+    } catch (error) {
+      console.error("Failed to get session key:", error);
+      return null;
     }
   }
 
@@ -124,14 +166,17 @@ export class SessionService {
       // 1. 清除内存中的加密密钥
       this.clearEncryptionKey();
 
-      // 2. 更新会话状态为已锁定
+      // 2. 清除 chrome.storage.session 中的会话密钥
+      await chrome.storage.session.remove(this.STORAGE_KEY_SESSION_KEY);
+
+      // 3. 更新会话状态为已锁定
       await this.saveSessionState({
         isLocked: true,
         lastActivityTime: Date.now(),
-        unlockedAt: null
+        unlockedAt: null,
       });
     } catch (error) {
-      console.error('Failed to lock session:', error);
+      console.error("Failed to lock session:", error);
     }
   }
 
@@ -163,7 +208,7 @@ export class SessionService {
         await this.saveSessionState(state);
       }
     } catch (error) {
-      console.error('Failed to update last activity:', error);
+      console.error("Failed to update last activity:", error);
     }
   }
 
