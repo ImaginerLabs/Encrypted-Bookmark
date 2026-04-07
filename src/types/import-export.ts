@@ -70,6 +70,8 @@ export interface BackupFileData {
   salt?: string;
   /** 初始化向量 */
   iv?: string;
+  /** SHA-256 校验和（Base64） */
+  checksum?: string;
   /** 明文数据（仅调试用，生产环境应加密） */
   data?: ImportExportData;
 }

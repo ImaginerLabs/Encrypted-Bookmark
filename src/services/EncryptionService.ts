@@ -229,10 +229,12 @@ export class EncryptionService {
 
       const plaintext = this.bufferToString(plaintextBuffer);
 
-      // 验证数据完整性
-      const checksum = await this.calculateChecksum(plaintext);
-      if (checksum !== encryptedData.checksum) {
-        throw new DataCorruptionError('数据校验和不匹配，数据可能已损坏');
+      // 验证数据完整性（兼容旧版本：checksum 为空时跳过校验）
+      if (encryptedData.checksum) {
+        const checksum = await this.calculateChecksum(plaintext);
+        if (checksum !== encryptedData.checksum) {
+          throw new DataCorruptionError('数据校验和不匹配，数据可能已损坏');
+        }
       }
 
       return plaintext;

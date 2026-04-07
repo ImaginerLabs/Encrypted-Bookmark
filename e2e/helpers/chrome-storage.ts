@@ -42,6 +42,25 @@ export class ChromeStorageHelper {
   }
 
   /**
+   * 只清空书签数据，保留密码设置
+   */
+  async clearBookmarksOnly(): Promise<void> {
+    await this.page.evaluate(async () => {
+      // 先保存密码相关数据
+      const passwordData = await chrome.storage.local.get([
+        "passwordHash",
+        "passwordStatus",
+      ]);
+      // 清空所有数据
+      await chrome.storage.local.clear();
+      // 恢复密码数据
+      if (Object.keys(passwordData).length > 0) {
+        await chrome.storage.local.set(passwordData);
+      }
+    });
+  }
+
+  /**
    * 预设密码已设置状态（用于跳过设置流程）
    * @param passwordHash 密码哈希（可选，使用默认测试哈希）
    */

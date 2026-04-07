@@ -202,7 +202,7 @@ export class ImportExportService {
           salt: pbmData.salt,
           iv: pbmData.iv,
           ciphertext: pbmData.encryptedData,
-          checksum: "",
+          checksum: pbmData.checksum || "",
         };
 
         const decrypted = await EncryptionService.decrypt(
@@ -443,6 +443,7 @@ export class ImportExportService {
       encryptedData: encrypted.ciphertext,
       salt: encrypted.salt,
       iv: encrypted.iv,
+      checksum: encrypted.checksum,
     };
 
     const fileName = `bookmarks_backup_${this.getDateString()}.pbm`;

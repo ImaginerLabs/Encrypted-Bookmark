@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import "./ContextMenu.css";
 
 /**
@@ -89,7 +90,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
   }, [onClose, position]);
 
-  return (
+  return createPortal(
     <div
       ref={menuRef}
       className="context-menu"
@@ -108,6 +109,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           {item.label}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 };

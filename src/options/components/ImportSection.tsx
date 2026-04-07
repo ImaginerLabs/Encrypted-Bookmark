@@ -25,62 +25,56 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onMessage, onImportSucces
   const pendingFileRef = useRef<File | null>(null);
 
   /**
-   * 处理文件选择
+   * 读取文件内容
    */
-  const handleFileSelect = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-
-      // 前端校验文件大小（最大 50MB）
-      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-      if (file.size > MAX_FILE_SIZE) {
-        onMessage(`文件过大，最大支持 50MB（当前文件：${(file.size / 1024 / 1024).toFixed(2)}MB）`, 'error');
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        return;
-      }
-
-      // 如果选择覆盖模式，显示二次确认
-      if (importStrategy === 'overwrite') {
-        pendingFileRef.current = file;
-        setShowOverwriteConfirm(true);
-        return;
-      }
-
-      // 直接执行导入
-      await executeImport(file);
-    },
-    [importStrategy, onMessage]
-  );
+  const readFileContent = useCallback((file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        resolve(content);
+      };
+      reader.onerror = () => reject(new Error('文件读取失败'));
+      reader.readAsText(file);
+    });
+  }, []);
 
   /**
-   * 确认覆盖导入
+   * 验证文件格式
    */
-  const confirmOverwrite = useCallback(async () => {
-    setShowOverwriteConfirm(false);
-    if (pendingFileRef.current) {
-      await executeImport(pendingFileRef.current);
-      pendingFileRef.current = null;
+  const validateFileFormat = useCallback((file: File, format: ImportFormat): boolean => {
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    switch (format) {
+      case 'html':
+        return extension === 'html' || extension === 'htm';
+      case 'json':
+        return extension === 'json';
+      case 'pbm':
+        return extension === 'pbm';
+      default:
+        return false;
     }
   }, []);
 
   /**
-   * 取消覆盖导入
+   * 获取格式扩展名
    */
-  const cancelOverwrite = useCallback(() => {
-    setShowOverwriteConfirm(false);
-    pendingFileRef.current = null;
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const getFormatExtension = useCallback((format: ImportFormat): string => {
+    switch (format) {
+      case 'html':
+        return '.html';
+      case 'json':
+        return '.json';
+      case 'pbm':
+        return '.pbm';
     }
   }, []);
 
   /**
    * 执行导入
    */
-  const executeImport = async (file: File) => {
+  const executeImport = useCallback(async (file: File) => {
     setImporting(true);
     setProgress(0);
     setProgressStage('读取文件...');
@@ -111,11 +105,12 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onMessage, onImportSucces
       });
 
       // 5. 调用导入服务
+      // 注意：如果用户没有输入解密密钥，默认使用当前登录密码（masterKey）
       const result = await importService.importBookmarks({
         format: importFormat,
         fileContent: fileContent,
         strategy: importStrategy,
-        decryptionKey: decryptionKey || undefined
+        decryptionKey: decryptionKey || masterKey
       });
 
       setProgress(100);
@@ -160,54 +155,60 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onMessage, onImportSucces
         setProgressStage('');
       }, 2000);
     }
-  };
+  }, [importFormat, importStrategy, decryptionKey, masterKey, onMessage, onImportSuccess, readFileContent, validateFileFormat, getFormatExtension]);
 
   /**
-   * 读取文件内容
+   * 处理文件选择
    */
-  const readFileContent = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target?.result as string;
-        resolve(content);
-      };
-      reader.onerror = () => reject(new Error('文件读取失败'));
-      reader.readAsText(file);
-    });
-  };
+  const handleFileSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // 前端校验文件大小（最大 50MB）
+      const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+      if (file.size > MAX_FILE_SIZE) {
+        onMessage(`文件过大，最大支持 50MB（当前文件：${(file.size / 1024 / 1024).toFixed(2)}MB）`, 'error');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+
+      // 如果选择覆盖模式，显示二次确认
+      if (importStrategy === 'overwrite') {
+        pendingFileRef.current = file;
+        setShowOverwriteConfirm(true);
+        return;
+      }
+
+      // 直接执行导入
+      await executeImport(file);
+    },
+    [importStrategy, onMessage, executeImport]
+  );
 
   /**
-   * 验证文件格式
+   * 确认覆盖导入
    */
-  const validateFileFormat = (file: File, format: ImportFormat): boolean => {
-    const extension = file.name.split('.').pop()?.toLowerCase();
-    
-    switch (format) {
-      case 'html':
-        return extension === 'html' || extension === 'htm';
-      case 'json':
-        return extension === 'json';
-      case 'pbm':
-        return extension === 'pbm';
-      default:
-        return false;
+  const confirmOverwrite = useCallback(async () => {
+    setShowOverwriteConfirm(false);
+    if (pendingFileRef.current) {
+      await executeImport(pendingFileRef.current);
+      pendingFileRef.current = null;
     }
-  };
+  }, [executeImport]);
 
   /**
-   * 获取格式扩展名
+   * 取消覆盖导入
    */
-  const getFormatExtension = (format: ImportFormat): string => {
-    switch (format) {
-      case 'html':
-        return '.html';
-      case 'json':
-        return '.json';
-      case 'pbm':
-        return '.pbm';
+  const cancelOverwrite = useCallback(() => {
+    setShowOverwriteConfirm(false);
+    pendingFileRef.current = null;
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
-  };
+  }, []);
 
   /**
    * 触发文件选择
@@ -280,11 +281,11 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onMessage, onImportSucces
             type="password"
             value={decryptionKey}
             onChange={(e) => setDecryptionKey(e.target.value)}
-            placeholder="如果是加密备份文件，请输入密钥"
+            placeholder="留空将使用当前登录密码"
             disabled={importing}
           />
           <small className="form-hint">
-            如果备份文件未加密，留空即可
+            如果导出时设置了独立密钥，请输入对应密钥；否则留空即可
           </small>
         </div>
       )}
@@ -292,6 +293,7 @@ const ImportSection: React.FC<ImportSectionProps> = ({ onMessage, onImportSucces
       {/* 文件选择 */}
       <div className="form-group">
         <input
+          key={importFormat}
           ref={fileInputRef}
           type="file"
           accept={getFormatExtension(importFormat)}
