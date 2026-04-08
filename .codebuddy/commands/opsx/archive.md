@@ -60,7 +60,63 @@ Archive a completed change in the experimental workflow.
 
    If user chooses sync, use Task tool (subagent_type: "general-purpose", prompt: "Use Skill tool to invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>"). Proceed to archive regardless of choice.
 
-5. **Perform the archive**
+5. **Update Documentation (Documentation Phase)**
+
+   Before archiving, update project documentation to reflect the completed change. Use the **Task tool** with subagent_name `通用资深前端研发` to perform documentation updates.
+
+   **Agent Prompt Template:**
+
+   ```
+   You are the documentation lead for the Encrypted Bookmark project. Please complete the documentation updates for this delivered change.
+
+   ## Documentation Update Tasks
+
+   1. First read the change artifacts:
+      - `openspec/changes/<name>/proposal.md`
+      - `openspec/changes/<name>/design.md`
+      - `openspec/changes/<name>/tasks.md`
+
+   2. Update documentation in the following priority order:
+
+   ### CHANGELOG.md
+   Add a new version entry at the top of the file following Keep a Changelog format:
+   ```
+
+   ## [X.X.X] - YYYY-MM-DD
+
+   ### Added / Changed / Fixed / Deprecated / Removed / Security
+   - Feature/change description
+
+   ```
+
+   ### README.md
+   - If new core features were added → Update the "Core Features" section
+   - If tech stack changed → Update the "Tech Stack" section
+   - If project structure changed → Update the "Project Structure" section
+
+   ### docs/QUICKSTART.md
+   - If new features affect user operations → Add relevant sections
+   - If new settings were added → Update the settings page documentation
+
+   ### package.json Version Sync
+   - Read the latest version from CHANGELOG.md (the newly added `[X.X.X]`)
+   - Update the `version` field in `package.json` to match
+   - If `package-lock.json` exists, also update its top-level `version` field
+
+   3. Maintain consistency with existing documentation style
+   ```
+
+   **Documentation Update Checklist:**
+
+   | File                 | Update Condition                   | Action                      |
+   | -------------------- | ---------------------------------- | --------------------------- |
+   | `CHANGELOG.md`       | Always                             | Add version entry at top    |
+   | `README.md`          | If features/tech/structure changed | Update relevant sections    |
+   | `docs/QUICKSTART.md` | If user operations affected        | Add/update sections         |
+   | `package.json`       | Always                             | Sync version with CHANGELOG |
+   | `package-lock.json`  | If exists                          | Sync version with CHANGELOG |
+
+6. **Perform the archive**
 
    Create the archive directory if it doesn't exist:
    ```bash
@@ -77,13 +133,14 @@ Archive a completed change in the experimental workflow.
    mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
    ```
 
-6. **Display summary**
+7. **Display summary**
 
    Show archive completion summary including:
    - Change name
    - Schema that was used
    - Archive location
    - Spec sync status (synced / sync skipped / no delta specs)
+   - Documentation updates performed
    - Note about any warnings (incomplete artifacts/tasks)
 
 **Output On Success**
@@ -94,20 +151,8 @@ Archive a completed change in the experimental workflow.
 **Change:** <change-name>
 **Schema:** <schema-name>
 **Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
-**Specs:** ✓ Synced to main specs
-
-All artifacts complete. All tasks complete.
-```
-
-**Output On Success (No Delta Specs)**
-
-```
-## Archive Complete
-
-**Change:** <change-name>
-**Schema:** <schema-name>
-**Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
-**Specs:** No delta specs
+**Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
+**Documentation:** ✓ CHANGELOG.md, README.md, package.json updated
 
 All artifacts complete. All tasks complete.
 ```
@@ -121,6 +166,7 @@ All artifacts complete. All tasks complete.
 **Schema:** <schema-name>
 **Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
 **Specs:** Sync skipped (user chose to skip)
+**Documentation:** ✓ CHANGELOG.md, README.md, package.json updated
 
 **Warnings:**
 - Archived with 2 incomplete artifacts
@@ -154,3 +200,6 @@ Target archive directory already exists.
 - Show clear summary of what happened
 - If sync is requested, use the Skill tool to invoke `openspec-sync-specs` (agent-driven)
 - If delta specs exist, always run the sync assessment and show the combined summary before prompting
+- Always update CHANGELOG.md and package.json version before archiving
+- Maintain Keep a Changelog format for version entries
+- Keep documentation style consistent with existing content

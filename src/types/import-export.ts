@@ -1,4 +1,4 @@
-import type { Bookmark, Folder, Tag } from './data';
+import type { Bookmark, Folder, Tag } from "./data";
 
 /**
  * 导入导出类型定义
@@ -8,22 +8,61 @@ import type { Bookmark, Folder, Tag } from './data';
 /**
  * 支持的导入格式
  */
-export type ImportFormat = 'html' | 'json' | 'pbm';
+export type ImportFormat = "html" | "json" | "pbm";
 
 /**
  * 支持的导出格式
  */
-export type ExportFormat = 'json-encrypted' | 'json-plain' | 'html';
+export type ExportFormat = "pbm" | "json" | "html";
+
+/**
+ * 格式配置项
+ */
+export interface FormatConfigItem {
+  /** 显示文案 */
+  label: string;
+  /** 文件扩展名 */
+  ext: string;
+  /** MIME 类型 */
+  mime: string;
+  /** 描述提示 */
+  hint: string;
+}
+
+/**
+ * 格式配置（导入导出共用，单一数据源）
+ */
+export const FORMAT_CONFIG: Record<"pbm" | "json" | "html", FormatConfigItem> =
+  {
+    pbm: {
+      label: "加密备份 (.pbm)",
+      ext: ".pbm",
+      mime: "application/json",
+      hint: "插件专用加密格式，最安全",
+    },
+    json: {
+      label: "JSON 明文 (.json)",
+      ext: ".json",
+      mime: "application/json",
+      hint: "通用 JSON 格式，数据未加密，请妥善保管",
+    },
+    html: {
+      label: "HTML 书签 (.html)",
+      ext: ".html",
+      mime: "text/html",
+      hint: "可导入到 Chrome、Firefox、Edge 等浏览器",
+    },
+  } as const;
 
 /**
  * 导入策略
  */
-export type ImportStrategy = 'merge' | 'overwrite';
+export type ImportStrategy = "merge" | "overwrite";
 
 /**
  * 导出范围
  */
-export type ExportScope = 'all' | 'bookmarks-only';
+export type ExportScope = "all" | "bookmarks-only";
 
 /**
  * 导入导出数据结构（通用 JSON 格式）
@@ -57,7 +96,7 @@ export interface ImportExportData {
  */
 export interface BackupFileData {
   /** 文件格式标识 */
-  format: 'pbm';
+  format: "pbm";
   /** 版本号 */
   version: string;
   /** 加密标记 */
@@ -159,7 +198,7 @@ export interface ImportProgress {
  */
 export interface ChromeBookmarkNode {
   /** 节点类型 */
-  type: 'folder' | 'bookmark';
+  type: "folder" | "bookmark";
   /** 标题 */
   title: string;
   /** URL（仅书签） */
@@ -175,7 +214,7 @@ export interface ChromeBookmarkNode {
  */
 export interface FormatValidationError {
   /** 错误类型 */
-  type: 'format' | 'structure' | 'version' | 'encoding';
+  type: "format" | "structure" | "version" | "encoding";
   /** 错误消息 */
   message: string;
   /** 错误位置（行号） */

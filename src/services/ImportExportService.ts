@@ -382,14 +382,14 @@ export class ImportExportService {
       const tags = options.scope === "all" ? await this.readTags() : [];
 
       switch (options.format) {
-        case "json-encrypted":
+        case "pbm":
           return await this.exportJsonEncrypted(
             bookmarks,
             folders,
             tags,
             options.encryptionKey,
           );
-        case "json-plain":
+        case "json":
           return await this.exportJsonPlain(bookmarks, folders, tags);
         case "html":
           return await this.exportHtml(bookmarks, folders);

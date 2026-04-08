@@ -1,36 +1,111 @@
-import React, { useState, useCallback } from 'react';
-import type { ExportFormat, ExportScope } from '@/types/import-export';
-import { ImportExportService } from '@/services';
-import { ChromeStorageAdapter } from '@/storage';
-import './SettingsPanel.css';
+import React, { useState, useCallback, useRef } from "react";
+import type { ExportFormat, ExportScope } from "@/types/import-export";
+import { FORMAT_CONFIG } from "@/types/import-export";
+import { ImportExportService } from "@/services";
+import { ChromeStorageAdapter } from "@/storage";
+import "./SettingsPanel.css";
 
 interface ExportSectionProps {
-  onMessage: (message: string, type: 'success' | 'error') => void;
+  onMessage: (message: string, type: "success" | "error") => void;
   masterKey: string; // 主密钥，用于加密数据
 }
 
 /**
  * 导出区域组件
  */
-const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) => {
+const ExportSection: React.FC<ExportSectionProps> = ({
+  onMessage,
+  masterKey,
+}) => {
   const [exporting, setExporting] = useState(false);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('json-encrypted');
-  const [exportScope, setExportScope] = useState<ExportScope>('all');
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("pbm");
+  const [exportScope, setExportScope] = useState<ExportScope>("all");
   const [showPlainWarning, setShowPlainWarning] = useState(false);
-  const [encryptionKey, setEncryptionKey] = useState('');
+  const [encryptionKey, setEncryptionKey] = useState("");
+
+  // 使用 useRef 保存最新状态，避免闭包过时问题
+  const formatRef = useRef(exportFormat);
+  formatRef.current = exportFormat;
+  const scopeRef = useRef(exportScope);
+  scopeRef.current = exportScope;
+  const encryptionKeyRef = useRef(encryptionKey);
+  encryptionKeyRef.current = encryptionKey;
+  const masterKeyRef = useRef(masterKey);
+  masterKeyRef.current = masterKey;
+
+  /**
+   * 下载文件
+   */
+  const downloadFile = useCallback(
+    (content: string, filename: string, mimeType: string) => {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    [],
+  );
+
+  /**
+   * 执行导出（通过 ref 读取最新状态，彻底避免闭包陷阱）
+   */
+  const executeExport = useCallback(async () => {
+    setExporting(true);
+
+    try {
+      // 通过 ref 读取最新状态
+      const currentFormat = formatRef.current;
+      const currentScope = scopeRef.current;
+      const currentKey = encryptionKeyRef.current;
+      const currentMasterKey = masterKeyRef.current;
+
+      // 1. 实例化 ImportExportService
+      const storageAdapter = new ChromeStorageAdapter();
+      const exportService = new ImportExportService(storageAdapter);
+      exportService.setMasterKey(currentMasterKey);
+
+      // 2. 调用导出服务
+      const result = await exportService.exportBookmarks({
+        format: currentFormat,
+        scope: currentScope,
+        encryptionKey: currentKey || undefined,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "导出失败");
+      }
+
+      // 3. 触发文件下载
+      if (result.fileContent && result.fileName && result.mimeType) {
+        downloadFile(result.fileContent, result.fileName, result.mimeType);
+        onMessage(`✅ 导出成功：${result.fileName}`, "success");
+      } else {
+        throw new Error("导出数据不完整");
+      }
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "导出失败", "error");
+    } finally {
+      setExporting(false);
+    }
+  }, [downloadFile, onMessage]);
 
   /**
    * 处理导出
    */
   const handleExport = useCallback(async () => {
     // 明文导出需要二次确认
-    if (exportFormat === 'json-plain') {
+    if (formatRef.current === "json") {
       setShowPlainWarning(true);
       return;
     }
 
     await executeExport();
-  }, [exportFormat, exportScope, encryptionKey]);
+  }, [executeExport]);
 
   /**
    * 确认明文导出
@@ -38,7 +113,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
   const confirmPlainExport = useCallback(async () => {
     setShowPlainWarning(false);
     await executeExport();
-  }, [exportScope]);
+  }, [executeExport]);
 
   /**
    * 取消明文导出
@@ -46,61 +121,6 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
   const cancelPlainExport = useCallback(() => {
     setShowPlainWarning(false);
   }, []);
-
-  /**
-   * 执行导出
-   */
-  const executeExport = async () => {
-    setExporting(true);
-
-    try {
-      // 1. 实例化 ImportExportService
-      const storageAdapter = new ChromeStorageAdapter();
-      const exportService = new ImportExportService(storageAdapter);
-      exportService.setMasterKey(masterKey);
-
-      // 2. 调用导出服务
-      const result = await exportService.exportBookmarks({
-        format: exportFormat,
-        scope: exportScope,
-        encryptionKey: encryptionKey || undefined
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || '导出失败');
-      }
-
-      // 3. 触发文件下载
-      if (result.fileContent && result.fileName && result.mimeType) {
-        downloadFile(result.fileContent, result.fileName, result.mimeType);
-        onMessage(`✅ 导出成功：${result.fileName}`, 'success');
-      } else {
-        throw new Error('导出数据不完整');
-      }
-    } catch (error) {
-      onMessage(
-        error instanceof Error ? error.message : '导出失败',
-        'error'
-      );
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  /**
-   * 下载文件
-   */
-  const downloadFile = (content: string, filename: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="settings-section">
@@ -114,15 +134,14 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
           onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
           disabled={exporting}
         >
-          <option value="json-encrypted">JSON 加密备份（推荐）</option>
-          <option value="json-plain">JSON 明文导出</option>
-          <option value="html">HTML 标准格式</option>
+          {(Object.keys(FORMAT_CONFIG) as ExportFormat[]).map((key) => (
+            <option key={key} value={key}>
+              {FORMAT_CONFIG[key].label}
+              {key === "pbm" ? "（推荐）" : ""}
+            </option>
+          ))}
         </select>
-        <small className="form-hint">
-          {exportFormat === 'json-encrypted' && '加密保护，可设置独立密钥，最安全'}
-          {exportFormat === 'json-plain' && '⚠️ 明文保存，数据未加密，请妥善保管'}
-          {exportFormat === 'html' && '可导入到 Chrome、Firefox、Edge 等浏览器'}
-        </small>
+        <small className="form-hint">{FORMAT_CONFIG[exportFormat].hint}</small>
       </div>
 
       {/* 范围选择 */}
@@ -134,7 +153,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
               type="radio"
               name="exportScope"
               value="all"
-              checked={exportScope === 'all'}
+              checked={exportScope === "all"}
               onChange={(e) => setExportScope(e.target.value as ExportScope)}
               disabled={exporting}
             />
@@ -145,7 +164,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
               type="radio"
               name="exportScope"
               value="bookmarks-only"
-              checked={exportScope === 'bookmarks-only'}
+              checked={exportScope === "bookmarks-only"}
               onChange={(e) => setExportScope(e.target.value as ExportScope)}
               disabled={exporting}
             />
@@ -155,7 +174,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
       </div>
 
       {/* 加密密钥（仅加密导出） */}
-      {exportFormat === 'json-encrypted' && (
+      {exportFormat === "pbm" && (
         <div className="form-group">
           <label>加密密钥（可选）</label>
           <input
@@ -178,7 +197,7 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
           onClick={handleExport}
           disabled={exporting}
         >
-          {exporting ? '导出中...' : '开始导出'}
+          {exporting ? "导出中..." : "开始导出"}
         </button>
       </div>
 
@@ -187,13 +206,14 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
         <h4>📋 导出说明</h4>
         <ul>
           <li>
-            <strong>JSON 加密备份</strong>：推荐用于日常备份，可设置独立密钥
+            <strong>加密备份</strong>：推荐用于日常备份，可设置独立密钥
           </li>
           <li>
-            <strong>JSON 明文导出</strong>：数据未加密，适合分析或迁移到其他工具
+            <strong>JSON 明文</strong>：数据未加密，适合分析或迁移到其他工具
           </li>
           <li>
-            <strong>HTML 标准格式</strong>：可导入到任何支持 Netscape 书签格式的浏览器
+            <strong>HTML 书签</strong>：可导入到任何支持 Netscape
+            书签格式的浏览器
           </li>
           <li>导出的文件将自动下载到浏览器默认下载目录</li>
         </ul>
@@ -205,14 +225,15 @@ const ExportSection: React.FC<ExportSectionProps> = ({ onMessage, masterKey }) =
           <div className="modal-content">
             <h4>⚠️ 明文导出风险提示</h4>
             <p>
-              您选择了<strong>明文导出</strong>，导出的文件将<strong>不包含任何加密保护</strong>。
+              您选择了<strong>明文导出</strong>，导出的文件将
+              <strong>不包含任何加密保护</strong>。
             </p>
-            <ul style={{ textAlign: 'left', marginTop: '10px' }}>
+            <ul style={{ textAlign: "left", marginTop: "10px" }}>
               <li>任何人获取该文件都可以直接查看您的书签</li>
               <li>请妥善保管导出文件，避免泄露</li>
-              <li>建议优先使用「JSON 加密备份」格式</li>
+              <li>建议优先使用「加密备份」格式</li>
             </ul>
-            <p style={{ marginTop: '15px' }}>确定要继续明文导出吗？</p>
+            <p style={{ marginTop: "15px" }}>确定要继续明文导出吗？</p>
             <div className="modal-actions">
               <button className="btn btn-danger" onClick={confirmPlainExport}>
                 确认导出
