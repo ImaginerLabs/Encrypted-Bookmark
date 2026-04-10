@@ -6,6 +6,23 @@
 
 ---
 
+## [1.5.0] - 2026-04-09
+
+### Added
+- 引入 Vitest 单元测试框架，配置 jsdom 环境、覆盖率报告（v8）
+- 新增 `test`、`test:watch`、`test:coverage` npm scripts
+- 创建 Chrome API Mock（chrome.storage、chrome.runtime、chrome.tabs、chrome.idle）
+- 创建 Web Crypto API 测试环境配置
+- 工具函数单元测试：passwordHasher、passwordValidator、xssProtection、favicon、helpers（67 tests）
+- 解析器单元测试：HtmlParser、HtmlGenerator、JsonParser（41 tests）
+- 存储层单元测试：ChromeStorageAdapter、FileSystemAdapter、StorageLockManager、StorageMigrator（30 tests）
+- 核心服务层单元测试：EncryptionService、AuthService、PasswordService、SessionService、LockService、SettingsService 等（71 tests）
+- React Hooks 单元测试：useBookmarks、useCurrentTab、useFolders、useTags、useSearch 等（12 tests）
+- Smoke test 验证测试基础设施完整性（13 tests）
+- 新增 devDependencies：vitest、@vitest/coverage-v8、jsdom、@testing-library/react、@testing-library/jest-dom、@testing-library/user-event
+
+---
+
 ## [1.4.0] - 2026-04-03
 
 ### Added
