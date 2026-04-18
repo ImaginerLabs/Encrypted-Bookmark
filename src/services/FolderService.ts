@@ -1,5 +1,7 @@
 import type { IStorageAdapter } from '@/storage/interfaces/IStorageAdapter';
 import { EncryptionService } from './EncryptionService';
+import { globalLockManager } from '@/storage';
+import type { StorageLockManager } from '@/storage/services/StorageLockManager';
 import type { Folder } from '@/types/data';
 import type {
   FolderWithDefault,
@@ -26,12 +28,19 @@ export class FolderService {
   private folderStorage: IStorageAdapter;
   /** 存储适配器 - 书签数据（用于级联操作） */
   private bookmarkStorage: IStorageAdapter;
+  /** 锁管理器 */
+  private lockManager: StorageLockManager;
   /** 当前解锁的主密钥 */
   private masterKey: string | null = null;
 
-  constructor(folderStorage: IStorageAdapter, bookmarkStorage: IStorageAdapter) {
+  constructor(
+    folderStorage: IStorageAdapter,
+    bookmarkStorage: IStorageAdapter,
+    lockManager: StorageLockManager = globalLockManager
+  ) {
     this.folderStorage = folderStorage;
     this.bookmarkStorage = bookmarkStorage;
+    this.lockManager = lockManager;
   }
 
   /**
@@ -244,102 +253,109 @@ export class FolderService {
    * 删除文件夹（级联迁移书签至"未分类"）
    */
   async deleteFolder(id: string): Promise<Result<BatchOperationResult>> {
-    try {
-      // 禁止删除默认文件夹
-      if (id === DEFAULT_FOLDER_ID) {
-        return {
-          success: false,
-          error: '默认"未分类"文件夹不可删除'
-        };
-      }
-
-      const folders = await this.readFolders();
-      const folderIndex = folders.findIndex(f => f.id === id);
-
-      if (folderIndex === -1) {
-        return {
-          success: false,
-          error: '文件夹不存在'
-        };
-      }
-
-      // 查找该文件夹下的所有书签
-      const bookmarks = await this.readBookmarks();
-      const affectedBookmarks = bookmarks.filter(b => b.folderId === id && !b.isDeleted);
-
-      // 如果没有书签,直接删除文件夹
-      if (affectedBookmarks.length === 0) {
-        folders.splice(folderIndex, 1);
-        await this.writeFolders(folders);
-        return {
-          success: true,
-          data: {
-            successCount: 0,
-            failedCount: 0
-          }
-        };
-      }
-
-      // === 事务性操作:先迁移书签,再删除文件夹 ===
-
-      // 1. 备份原数据(用于回滚)
-      const originalFolderIds = affectedBookmarks.map(b => b.folderId);
-
-      try {
-        // 2. 迁移书签至"未分类"
-        affectedBookmarks.forEach(bookmark => {
-          bookmark.folderId = DEFAULT_FOLDER_ID;
-          bookmark.updateTime = Date.now();
-        });
-
-        // 3. 先保存书签(如果失败会抛异常)
-        await this.writeBookmarks(bookmarks);
-
-        // 4. 保存成功后,删除文件夹
-        folders.splice(folderIndex, 1);
-        await this.writeFolders(folders);
-
-        // 5. 全部成功
-        return {
-          success: true,
-          data: {
-            successCount: affectedBookmarks.length,
-            failedCount: 0
-          }
-        };
-
-      } catch (saveError) {
-        // === 回滚机制 ===
-        // 恢复书签的原folderId
-        affectedBookmarks.forEach((bookmark, index) => {
-          bookmark.folderId = originalFolderIds[index];
-        });
-
-        // 尝试回滚书签数据
+    // 使用锁保护整个删除流程，确保原子性
+    return this.lockManager.withLock(
+      this.folderStorage,
+      async () => {
         try {
-          await this.writeBookmarks(bookmarks);
-        } catch (rollbackError) {
-          // 回滚失败,记录日志
-          console.error('回滚失败:', rollbackError);
-        }
-
-        // 返回错误
-        return {
-          success: false,
-          error: `删除文件夹失败: ${saveError instanceof Error ? saveError.message : '未知错误'}`,
-          data: {
-            successCount: 0,
-            failedCount: affectedBookmarks.length,
-            errors: ['书签迁移失败,已回滚操作']
+          // 禁止删除默认文件夹
+          if (id === DEFAULT_FOLDER_ID) {
+            return {
+              success: false,
+              error: '默认"未分类"文件夹不可删除'
+            };
           }
-        };
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '删除文件夹失败'
-      };
-    }
+
+          const folders = await this.readFolders();
+          const folderIndex = folders.findIndex(f => f.id === id);
+
+          if (folderIndex === -1) {
+            return {
+              success: false,
+              error: '文件夹不存在'
+            };
+          }
+
+          // 查找该文件夹下的所有书签
+          const bookmarks = await this.readBookmarks();
+          const affectedBookmarks = bookmarks.filter(b => b.folderId === id && !b.isDeleted);
+
+          // 如果没有书签,直接删除文件夹
+          if (affectedBookmarks.length === 0) {
+            folders.splice(folderIndex, 1);
+            await this.writeFolders(folders);
+            return {
+              success: true,
+              data: {
+                successCount: 0,
+                failedCount: 0
+              }
+            };
+          }
+
+          // === 事务性操作:先迁移书签,再删除文件夹 ===
+
+          // 1. 备份完整书签数据(用于回滚)
+          const originalBookmarks = affectedBookmarks.map(b => ({ ...b }));
+
+          try {
+            // 2. 迁移书签至"未分类"
+            affectedBookmarks.forEach(bookmark => {
+              bookmark.folderId = DEFAULT_FOLDER_ID;
+              bookmark.updateTime = Date.now();
+            });
+
+            // 3. 先保存书签(如果失败会抛异常)
+            await this.writeBookmarks(bookmarks);
+
+            // 4. 保存成功后,删除文件夹
+            folders.splice(folderIndex, 1);
+            await this.writeFolders(folders);
+
+            // 5. 全部成功
+            return {
+              success: true,
+              data: {
+                successCount: affectedBookmarks.length,
+                failedCount: 0
+              }
+            };
+
+          } catch (saveError) {
+            // === 回滚机制 ===
+            // 恢复书签的原始数据
+            affectedBookmarks.forEach((bookmark, index) => {
+              Object.assign(bookmark, originalBookmarks[index]);
+            });
+
+            // 尝试回滚书签数据
+            try {
+              await this.writeBookmarks(bookmarks);
+            } catch (rollbackError) {
+              // 回滚失败,记录日志
+              console.error('回滚失败:', rollbackError);
+            }
+
+            // 返回错误
+            return {
+              success: false,
+              error: `删除文件夹失败: ${saveError instanceof Error ? saveError.message : '未知错误'}`,
+              data: {
+                successCount: 0,
+                failedCount: affectedBookmarks.length,
+                errors: ['书签迁移失败,已回滚操作']
+              }
+            };
+          }
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : '删除文件夹失败'
+          };
+        }
+      },
+      'write'
+    );
   }
 
   /**
@@ -473,10 +489,14 @@ export class FolderService {
 
   /**
    * 批量移动书签到指定文件夹
+   * @param bookmarkIds 书签ID数组
+   * @param targetFolderId 目标文件夹ID
+   * @param expectedVersions 期望版本号映射(可选,用于并发控制)
    */
   async moveBooksToFolder(
     bookmarkIds: string[],
-    targetFolderId: string
+    targetFolderId: string,
+    expectedVersions?: Record<string, number>
   ): Promise<Result<BatchOperationResult>> {
     try {
       // 检查目标文件夹是否存在
@@ -495,18 +515,48 @@ export class FolderService {
       let successCount = 0;
       let failedCount = 0;
       const failedIds: string[] = [];
+      const errors: string[] = [];
 
-      bookmarkIds.forEach(bookmarkId => {
+      for (const bookmarkId of bookmarkIds) {
         const index = bookmarks.findIndex(b => b.id === bookmarkId && !b.isDeleted);
-        if (index !== -1) {
-          bookmarks[index].folderId = targetFolderId;
-          bookmarks[index].updateTime = Date.now();
-          successCount++;
-        } else {
+        if (index === -1) {
           failedCount++;
           failedIds.push(bookmarkId);
+          errors.push(`书签不存在或已删除: ${bookmarkId}`);
+          continue;
         }
-      });
+
+        // === 乐观锁冲突检测 ===
+        if (expectedVersions && Object.prototype.hasOwnProperty.call(expectedVersions, bookmarkId)) {
+          const currentVersion = bookmarks[index].version || 1;
+          const expectedVersion = expectedVersions[bookmarkId];
+          if (currentVersion !== expectedVersion) {
+            failedCount++;
+            failedIds.push(bookmarkId);
+            errors.push(`书签(${bookmarkId})已被其他窗口修改(当前版本:${currentVersion},期望:${expectedVersion})`);
+            continue;
+          }
+        }
+
+        bookmarks[index].folderId = targetFolderId;
+        bookmarks[index].updateTime = Date.now();
+        bookmarks[index].version = (bookmarks[index].version || 1) + 1;
+        successCount++;
+      }
+
+      // 如果有版本冲突,返回错误信息
+      if (failedCount > 0 && errors.length > 0) {
+        return {
+          success: false,
+          error: '部分书签已被其他窗口修改,请刷新后重试',
+          data: {
+            successCount,
+            failedCount,
+            failedIds,
+            errors
+          }
+        };
+      }
 
       // 保存书签
       if (successCount > 0) {

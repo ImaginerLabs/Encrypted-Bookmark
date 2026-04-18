@@ -48,6 +48,7 @@ export class SessionService {
   /**
    * 保存会话状态
    * @param state 会话状态
+   * @throws 如果保存失败则抛出错误
    */
   private static async saveSessionState(state: SessionState): Promise<void> {
     try {
@@ -55,7 +56,8 @@ export class SessionService {
         [this.STORAGE_KEY_SESSION]: state,
       });
     } catch (error) {
-      console.error("Failed to save session state:", error);
+      console.error("[SessionService] 保存会话状态失败:", error);
+      throw new Error("保存会话状态失败");
     }
   }
 
@@ -120,24 +122,26 @@ export class SessionService {
    * 直接标记会话为已解锁（跳过密码验证）
    * 用于 PasswordService 已验证密码后同步会话状态
    * @param masterKey 可选，传入时会将密钥存储到 chrome.storage.session 中
+   * @throws 如果标记失败则抛出错误
    */
   static async markUnlocked(masterKey?: string): Promise<void> {
-    try {
-      const now = Date.now();
-      await this.saveSessionState({
-        isLocked: false,
-        lastActivityTime: now,
-        unlockedAt: now,
-      });
+    const now = Date.now();
+    await this.saveSessionState({
+      isLocked: false,
+      lastActivityTime: now,
+      unlockedAt: now,
+    });
 
-      // 将 masterKey 存储到 chrome.storage.session（跨页面持久化，浏览器重启自动清除）
-      if (masterKey) {
+    // 将 masterKey 存储到 chrome.storage.session（跨页面持久化，浏览器重启自动清除）
+    if (masterKey) {
+      try {
         await chrome.storage.session.set({
           [this.STORAGE_KEY_SESSION_KEY]: masterKey,
         });
+      } catch (error) {
+        console.error("[SessionService] 存储会话密钥失败:", error);
+        throw new Error("存储会话密钥失败");
       }
-    } catch (error) {
-      console.error("Failed to mark session as unlocked:", error);
     }
   }
 
@@ -160,6 +164,7 @@ export class SessionService {
 
   /**
    * 锁定会话
+   * @throws 如果锁定失败则抛出错误
    */
   static async lock(): Promise<void> {
     try {
@@ -176,7 +181,8 @@ export class SessionService {
         unlockedAt: null,
       });
     } catch (error) {
-      console.error("Failed to lock session:", error);
+      console.error("[SessionService] 锁定会话失败:", error);
+      throw new Error("锁定会话失败");
     }
   }
 

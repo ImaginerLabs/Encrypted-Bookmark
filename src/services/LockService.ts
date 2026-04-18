@@ -109,7 +109,11 @@ export class LockService {
 
     // 设置主锁定计时器
     this.timerId = window.setTimeout(async () => {
-      await this.triggerLock();
+      try {
+        await this.triggerLock();
+      } catch (error) {
+        console.error('[LockService] 主锁定计时器执行失败:', error);
+      }
     }, timeoutMs);
 
     // 设置提醒计时器
@@ -119,7 +123,11 @@ export class LockService {
       if (reminderMs < timeoutMs) {
         const triggerTime = timeoutMs - reminderMs;
         const reminderId = window.setTimeout(() => {
-          this.triggerReminder(reminderSeconds);
+          try {
+            this.triggerReminder(reminderSeconds);
+          } catch (error) {
+            console.error('[LockService] 提醒计时器执行失败:', error);
+          }
         }, triggerTime);
         this.reminderTimers.push(reminderId);
       }
