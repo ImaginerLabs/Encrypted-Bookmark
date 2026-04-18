@@ -39,8 +39,11 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     };
 
     // 延迟注册，避免触发右键事件的冒泡导致菜单立即关闭
+    let isMounted = true;
     const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClick);
+      if (isMounted) {
+        document.addEventListener("mousedown", handleClick);
+      }
     }, 0);
     document.addEventListener("keydown", handleEscape);
 
@@ -84,6 +87,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     }
 
     return () => {
+      isMounted = false;
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEscape);

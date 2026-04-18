@@ -7,6 +7,7 @@ import {
   AccountLockedError,
 } from "@/types";
 import { Popup } from "./Popup";
+import { clearTagCache } from "./components/BookmarkItem";
 import "./App.css";
 
 /**
@@ -79,6 +80,7 @@ const App: React.FC = () => {
 
     try {
       await PasswordService.verifyMasterPassword(password);
+      clearTagCache(); // Clear tag cache on user switch/unlock
       setPassword("");
       await checkUnlockStatus();
       await loadPasswordStatus();

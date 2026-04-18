@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import type { Bookmark, Tag } from "@/types/data";
 import { getFaviconUrl } from "@/utils/favicon";
 import { highlightText } from "@/utils/highlight";
+import { isValidUrl } from "@/utils/helpers";
 import { ContextMenu } from "./ContextMenu";
 import { TagService } from "@/services/TagService";
 import { ChromeStorageAdapter } from "@/storage/adapters/ChromeStorageAdapter";
@@ -20,7 +21,13 @@ interface BookmarkItemProps {
 }
 
 /** 标签缓存（避免每个书签项重复请求） */
+const MAX_CACHE_SIZE = 100;
 const tagCache = new Map<string, Tag>();
+
+/** 清除标签缓存 */
+export const clearTagCache = (): void => {
+  tagCache.clear();
+};
 
 export const BookmarkItem: React.FC<BookmarkItemProps> = ({
   bookmark,
@@ -56,7 +63,16 @@ export const BookmarkItem: React.FC<BookmarkItemProps> = ({
             tagService.setMasterKey(masterKey);
             const result = await tagService.getTags();
             if (result.success && result.data) {
-              result.data.forEach((tag) => tagCache.set(tag.id, tag));
+              result.data.forEach((tag) => {
+                // LRU-style eviction when cache is full
+                if (tagCache.size >= MAX_CACHE_SIZE) {
+                  const firstKey = tagCache.keys().next().value;
+                  if (firstKey !== undefined) {
+                    tagCache.delete(firstKey);
+                  }
+                }
+                tagCache.set(tag.id, tag);
+              });
             }
           }
         }
@@ -135,7 +151,7 @@ export const BookmarkItem: React.FC<BookmarkItemProps> = ({
             {highlightText(bookmark.title, searchKeyword)}
           </div>
           <div className="bookmark-url" title={bookmark.url}>
-            {bookmark.url}
+            {isValidUrl(bookmark.url) ? bookmark.url : "链接不可用"}
           </div>
 
           {/* 标签云 - 显示真实名称和颜色 */}
