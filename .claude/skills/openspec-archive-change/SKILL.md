@@ -1,0 +1,189 @@
+---
+name: openspec-archive-change
+description: Archive a completed change in the experimental workflow. Use when the user wants to finalize and archive a change after implementation is complete.
+license: MIT
+compatibility: Requires openspec CLI.
+metadata:
+  author: openspec
+  version: "1.0"
+  generatedBy: "1.2.0"
+---
+
+Archive a completed change in the experimental workflow, with automatic documentation updates.
+
+**Input**: Optionally specify a change name. If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+
+## Project Context
+
+This workflow is designed for the Encrypted Bookmark Chrome extension project:
+
+| Aspect       | Details                                           |
+| ------------ | ------------------------------------------------- |
+| Project      | Encrypted Bookmark (加密书签管理 Chrome 扩展)     |
+| Tech Stack   | React 18 + TypeScript + Vite + @crxjs/vite-plugin |
+| Encryption   | Web Crypto API (AES-256-GCM + PBKDF2)             |
+| Browser Spec | Manifest V3                                       |
+| E2E Testing  | Playwright (`e2e/` directory, `npm run test:e2e`) |
+
+**Steps**
+
+1. **If no change name provided, prompt for selection**
+
+   Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
+
+   Show only active changes (not already archived).
+   Include the schema used for each change if available.
+
+   **IMPORTANT**: Do NOT guess or auto-select a change. Always let the user choose.
+
+2. **Check artifact completion status**
+
+   Run `openspec status --change "<name>" --json` to check artifact completion.
+
+   Parse the JSON to understand:
+   - `schemaName`: The workflow being used
+   - `artifacts`: List of artifacts with their status (`done` or other)
+
+   **If any artifacts are not `done`:**
+   - Display warning listing incomplete artifacts
+   - Use **AskUserQuestion tool** to confirm user wants to proceed
+   - Proceed if user confirms
+
+3. **Check task completion status**
+
+   Read the tasks file (typically `tasks.md`) to check for incomplete tasks.
+
+   Count tasks marked with `- [ ]` (incomplete) vs `- [x]` (complete).
+
+   **If incomplete tasks found:**
+   - Display warning showing count of incomplete tasks
+   - Use **AskUserQuestion tool** to confirm user wants to proceed
+   - Proceed if user confirms
+
+   **If no tasks file exists:** Proceed without task-related warning.
+
+4. **Assess delta spec sync state**
+
+   Check for delta specs at `openspec/changes/<name>/specs/`. If none exist, proceed without sync prompt.
+
+   **If delta specs exist:**
+   - Compare each delta spec with its corresponding main spec at `openspec/specs/<capability>/spec.md`
+   - Determine what changes would be applied (adds, modifications, removals, renames)
+   - Show a combined summary before prompting
+
+   **Prompt options:**
+   - If changes needed: "Sync now (recommended)", "Archive without syncing"
+   - If already synced: "Archive now", "Sync anyway", "Cancel"
+
+   If user chooses sync, use Task tool (subagent_type: "general-purpose", prompt: "Use Skill tool to invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>"). Proceed to archive regardless of choice.
+
+5. **Update Documentation (Documentation Phase)**
+
+   Before archiving, update project documentation to reflect the completed change. Use the **Task tool** with subagent_name `通用资深前端研发` to perform documentation updates.
+
+   **Agent Prompt Template:**
+
+   ```
+   You are the documentation lead for the Encrypted Bookmark project. Please complete the documentation updates for this delivered change.
+
+   ## Documentation Update Tasks
+
+   1. First read the change artifacts:
+      - `openspec/changes/<name>/proposal.md`
+      - `openspec/changes/<name>/design.md`
+      - `openspec/changes/<name>/tasks.md`
+
+   2. Update documentation in the following priority order:
+
+   ### CHANGELOG.md
+   Add a new version entry at the top of the file following Keep a Changelog format:
+   ```
+
+   ## [X.X.X] - YYYY-MM-DD
+
+   ### Added / Changed / Fixed / Deprecated / Removed / Security
+   - Feature/change description
+
+   ```
+
+   ### README.md
+   - If new core features were added → Update the "Core Features" section
+   - If tech stack changed → Update the "Tech Stack" section
+   - If project structure changed → Update the "Project Structure" section
+
+   ### docs/QUICKSTART.md
+   - If new features affect user operations → Add relevant sections
+   - If new settings were added → Update the settings page documentation
+
+   ### package.json Version Sync
+   - Read the latest version from CHANGELOG.md (the newly added `[X.X.X]`)
+   - Update the `version` field in `package.json` to match
+   - If `package-lock.json` exists, also update its top-level `version` field
+
+   3. Maintain consistency with existing documentation style
+   ```
+
+   **Documentation Update Checklist:**
+
+   | File                 | Update Condition                   | Action                      |
+   | -------------------- | ---------------------------------- | --------------------------- |
+   | `CHANGELOG.md`       | Always                             | Add version entry at top    |
+   | `README.md`          | If features/tech/structure changed | Update relevant sections    |
+   | `docs/QUICKSTART.md` | If user operations affected        | Add/update sections         |
+   | `package.json`       | Always                             | Sync version with CHANGELOG |
+   | `package-lock.json`  | If exists                          | Sync version with CHANGELOG |
+
+6. **Perform the archive**
+
+   Create the archive directory if it doesn't exist:
+
+   ```bash
+   mkdir -p openspec/changes/archive
+   ```
+
+   Generate target name using current date: `YYYY-MM-DD-<change-name>`
+
+   **Check if target already exists:**
+   - If yes: Fail with error, suggest renaming existing archive or using different date
+   - If no: Move the change directory to archive
+
+   ```bash
+   mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
+   ```
+
+7. **Display summary**
+
+   Show archive completion summary including:
+   - Change name
+   - Schema that was used
+   - Archive location
+   - Whether specs were synced (if applicable)
+   - Documentation updates performed
+   - Note about any warnings (incomplete artifacts/tasks)
+
+**Output On Success**
+
+```
+## Archive Complete
+
+**Change:** <change-name>
+**Schema:** <schema-name>
+**Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
+**Specs:** ✓ Synced to main specs (or "No delta specs" or "Sync skipped")
+**Documentation:** ✓ CHANGELOG.md, README.md, package.json updated
+
+All artifacts complete. All tasks complete.
+```
+
+**Guardrails**
+
+- Always prompt for change selection if not provided
+- Use artifact graph (openspec status --json) for completion checking
+- Don't block archive on warnings - just inform and confirm
+- Preserve .openspec.yaml when moving to archive (it moves with the directory)
+- Show clear summary of what happened
+- If sync is requested, use openspec-sync-specs approach (agent-driven)
+- If delta specs exist, always run the sync assessment and show the combined summary before prompting
+- Always update CHANGELOG.md and package.json version before archiving
+- Maintain Keep a Changelog format for version entries
+- Keep documentation style consistent with existing content
