@@ -1,8 +1,10 @@
 /* Popup 主容器样式 */
 
 .popup-container {
-  width: 400px;
-  height: 600px;
+  width: min(400px, 100vw);
+  height: min(600px, 100vh);
+  min-width: 320px;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
