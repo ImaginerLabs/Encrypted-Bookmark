@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { AddBookmarkInput } from "@/types/bookmark";
 import type { Folder } from "@/types/data";
 import { useCurrentTab } from "../hooks/useCurrentTab";
@@ -33,6 +33,9 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<boolean>(false);
   const [isReadLater, setIsReadLater] = useState<boolean>(false);
+
+  // 防止重复提交
+  const isSubmittedRef = useRef(false);
 
   // 自动填充当前页面信息
   useEffect(() => {
@@ -74,6 +77,8 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
   // 保存书签
   const handleSave = async () => {
     if (!validate()) return;
+    if (isSubmittedRef.current) return;
+    isSubmittedRef.current = true;
 
     try {
       setSaving(true);
@@ -106,6 +111,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
       });
     } finally {
       setSaving(false);
+      isSubmittedRef.current = false;
     }
   };
 

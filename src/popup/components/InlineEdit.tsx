@@ -61,11 +61,15 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
     onConfirm(trimmed);
   }, [inputValue, maxLength, value, onConfirm, onCancel]);
 
+  // 防止 blur/Enter 重复提交
+  const isEnterKeyRef = useRef(false);
+
   // 键盘事件
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter") {
         e.preventDefault();
+        isEnterKeyRef.current = true;
         handleSubmit();
       } else if (e.key === "Escape") {
         e.preventDefault();
@@ -75,9 +79,12 @@ export const InlineEdit: React.FC<InlineEditProps> = ({
     [handleSubmit, onCancel],
   );
 
-  // 失焦时提交
+  // 失焦时提交（仅在非 Enter 键触发时）
   const handleBlur = useCallback(() => {
-    handleSubmit();
+    if (!isEnterKeyRef.current) {
+      handleSubmit();
+    }
+    isEnterKeyRef.current = false;
   }, [handleSubmit]);
 
   return (
