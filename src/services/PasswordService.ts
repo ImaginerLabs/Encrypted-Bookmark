@@ -189,12 +189,6 @@ export class PasswordService {
 
     // 缓存到内存
     this.masterKey = password;
-    // 同步到 sessionStorage，供 Popup 等组件使用（仅页面上下文可用）
-    try {
-      sessionStorage.setItem("masterKey", password);
-    } catch {
-      /* service worker 无 sessionStorage */
-    }
 
     // 同步更新 SessionService 会话状态为已解锁
     try {
@@ -231,11 +225,6 @@ export class PasswordService {
     if (isValid) {
       // 验证成功：缓存密钥并重置失败次数
       this.masterKey = password;
-      try {
-        sessionStorage.setItem("masterKey", password);
-      } catch {
-        /* service worker 无 sessionStorage */
-      }
       await this.resetFailedAttempts();
 
       // 同步更新 SessionService 会话状态为已解锁
@@ -279,7 +268,7 @@ export class PasswordService {
    * 异步检查并恢复会话状态
    * 通过 SessionService（chrome.storage.session）检查会话是否仍然有效，
    * 并结合 autoLockMinutes 配置判断是否超时。
-   * 如果会话有效，尝试从 sessionStorage 恢复 masterKey。
+   * 如果会话有效，尝试从 chrome.storage.session 恢复 masterKey。
    * @returns 是否已解锁
    */
   static async checkAndRestoreSession(): Promise<boolean> {
@@ -310,12 +299,6 @@ export class PasswordService {
       const sessionKey = await SessionService.getSessionKey();
       if (sessionKey) {
         this.masterKey = sessionKey;
-        // 同步到 sessionStorage（仅当前页面上下文）
-        try {
-          sessionStorage.setItem("masterKey", sessionKey);
-        } catch {
-          /* service worker 无 sessionStorage */
-        }
         return true;
       }
 
@@ -333,11 +316,6 @@ export class PasswordService {
    */
   static async lock(): Promise<void> {
     this.masterKey = null;
-    try {
-      sessionStorage.removeItem("masterKey");
-    } catch {
-      /* service worker 无 sessionStorage */
-    }
     // 同步更新 SessionService 会话状态为已锁定
     await SessionService.lock();
   }

@@ -17,9 +17,13 @@ export class AuthService {
   private static readonly STORAGE_KEY_FAILED_ATTEMPTS = 'auth_failed_attempts';
 
   /** 连续失败次数阈值 (3次失败 → 锁定) */
-  private static readonly MAX_FAILED_ATTEMPTS = 3;
+  private static readonly LOCK_THRESHOLD_1 = 3;
   /** 锁定时长 (毫秒) */
-  private static readonly LOCK_DURATION_MS = 30 * 1000; // 30 秒
+  private static readonly LOCK_DURATION_1 = 30 * 1000; // 30 秒
+  /** 连续失败次数阈值 (5次失败 → 锁定) */
+  private static readonly LOCK_THRESHOLD_2 = 5;
+  /** 锁定时长 (毫秒) */
+  private static readonly LOCK_DURATION_2 = 5 * 60 * 1000; // 5 分钟
 
   /**
    * 检查是否已设置密码
@@ -129,9 +133,11 @@ export class AuthService {
     const newCount = record.count + 1;
     let lockedUntil = 0;
 
-    // 达到失败阈值 → 锁定
-    if (newCount >= this.MAX_FAILED_ATTEMPTS) {
-      lockedUntil = now + this.LOCK_DURATION_MS;
+    // 判断锁定策略
+    if (newCount >= this.LOCK_THRESHOLD_2) {
+      lockedUntil = now + this.LOCK_DURATION_2;
+    } else if (newCount >= this.LOCK_THRESHOLD_1) {
+      lockedUntil = now + this.LOCK_DURATION_1;
     }
 
     const newRecord: FailedAttemptRecord = {
@@ -256,7 +262,7 @@ export class AuthService {
         const failedRecord = await this.recordFailedAttempt();
         const remainingAttempts = Math.max(
           0,
-          this.MAX_FAILED_ATTEMPTS - failedRecord.count
+          this.LOCK_THRESHOLD_2 - failedRecord.count
         );
 
         let errorMsg = '密码错误';
@@ -264,7 +270,7 @@ export class AuthService {
           const remainingSeconds = Math.ceil(
             (failedRecord.lockedUntil - Date.now()) / 1000
           );
-          errorMsg = `连续输入错误 ${this.MAX_FAILED_ATTEMPTS} 次，账户已锁定 ${remainingSeconds} 秒`;
+          errorMsg = `连续输入错误 ${this.LOCK_THRESHOLD_1} 次，账户已锁定 ${remainingSeconds} 秒`;
         } else if (remainingAttempts > 0) {
           errorMsg = `密码错误，剩余 ${remainingAttempts} 次尝试机会`;
         }
@@ -348,6 +354,6 @@ export class AuthService {
    */
   static async getRemainingAttempts(): Promise<number> {
     const record = await this.getFailedAttemptRecord();
-    return Math.max(0, this.MAX_FAILED_ATTEMPTS - record.count);
+    return Math.max(0, this.LOCK_THRESHOLD_1 - record.count);
   }
 }

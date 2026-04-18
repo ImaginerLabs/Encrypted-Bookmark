@@ -4,8 +4,8 @@ import { PasswordStrength } from "@/types/auth";
 
 describe("PasswordValidator", () => {
   describe("isValidLength", () => {
-    it("6 位密码应通过长度校验", () => {
-      expect(PasswordValidator.isValidLength("123456")).toBe(true);
+    it("8 位密码应通过长度校验", () => {
+      expect(PasswordValidator.isValidLength("12345678")).toBe(true);
     });
 
     it("20 位密码应通过长度校验", () => {
@@ -82,7 +82,7 @@ describe("PasswordValidator", () => {
       const requirements = PasswordValidator.getRequirements();
       expect(Array.isArray(requirements)).toBe(true);
       expect(requirements.length).toBeGreaterThan(0);
-      expect(requirements.some((r) => r.includes("6"))).toBe(true);
+      expect(requirements.some((r) => r.includes("8"))).toBe(true);
     });
   });
 });

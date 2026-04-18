@@ -6,7 +6,7 @@ import { PasswordStrength, type PasswordStrengthResult } from '@/types/auth';
  */
 export class PasswordValidator {
   /** 最小密码长度 */
-  private static readonly MIN_LENGTH = 6;
+  private static readonly MIN_LENGTH = 8;
   /** 最大密码长度 */
   private static readonly MAX_LENGTH = 20;
 
