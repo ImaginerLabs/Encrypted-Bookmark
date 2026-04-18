@@ -42,6 +42,18 @@ export class EncryptionService {
   }
 
   /**
+   * 时序安全的字节数组比较
+   */
+  private static timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+    return result === 0;
+  }
+
+  /**
    * 将 BufferSource 转换为 Base64
    */
   private static bufferToBase64(buffer: BufferSource): string {
@@ -232,7 +244,10 @@ export class EncryptionService {
       // 验证数据完整性（兼容旧版本：checksum 为空时跳过校验）
       if (encryptedData.checksum) {
         const checksum = await this.calculateChecksum(plaintext);
-        if (checksum !== encryptedData.checksum) {
+        const a = new TextEncoder().encode(checksum);
+        const b = new TextEncoder().encode(encryptedData.checksum);
+        const isValid = this.timingSafeEqual(a, b);
+        if (!isValid) {
           throw new DataCorruptionError('数据校验和不匹配，数据可能已损坏');
         }
       }
@@ -270,7 +285,9 @@ export class EncryptionService {
   ): Promise<boolean> {
     try {
       const computedHash = await this.hashPassword(password);
-      return computedHash === hash;
+      const a = new TextEncoder().encode(computedHash);
+      const b = new TextEncoder().encode(hash);
+      return this.timingSafeEqual(a, b);
     } catch (error) {
       throw new EncryptionError('密码验证失败', error);
     }

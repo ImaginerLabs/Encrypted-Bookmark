@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { FolderService } from "@/services/FolderService";
 import { ChromeStorageAdapter } from "@/storage/adapters/ChromeStorageAdapter";
 import type {
@@ -16,18 +16,20 @@ export const useFolderActions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** 创建 FolderService 实例 */
-  const createService = useCallback(() => {
-    const folderStorage = ChromeStorageAdapter.getFolderInstance();
-    const bookmarkStorage = ChromeStorageAdapter.getInstance();
-    const service = new FolderService(folderStorage, bookmarkStorage);
+  /** 创建 FolderService 实例（每次调用时重新创建以获取最新的 masterKey） */
+  const createService = useMemo(() => {
+    return () => {
+      const folderStorage = ChromeStorageAdapter.getFolderInstance();
+      const bookmarkStorage = ChromeStorageAdapter.getInstance();
+      const service = new FolderService(folderStorage, bookmarkStorage);
 
-    const masterKey = sessionStorage.getItem("masterKey");
-    if (!masterKey) {
-      throw new Error("未解锁，请先输入密码");
-    }
-    service.setMasterKey(masterKey);
-    return service;
+      const masterKey = sessionStorage.getItem("masterKey");
+      if (!masterKey) {
+        throw new Error("未解锁，请先输入密码");
+      }
+      service.setMasterKey(masterKey);
+      return service;
+    };
   }, []);
 
   /** 新建文件夹 */

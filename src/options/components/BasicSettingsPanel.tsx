@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { SettingsService } from '@/services/SettingsService';
+import { FolderService } from '@/services/FolderService';
+import { ChromeStorageAdapter } from '@/storage/adapters/ChromeStorageAdapter';
+import { PasswordService } from '@/services/PasswordService';
+import { SessionService } from '@/services/SessionService';
 import type { BasicSettings } from '@/types/settings';
 import type { Folder } from '@/types/data';
 import './SettingsPanel.css';
@@ -18,29 +22,55 @@ const BasicSettingsPanel: React.FC<BasicSettingsPanelProps> = ({ onMessage }) =>
 
   // 加载设置和文件夹列表
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        // 检查会话状态并恢复 masterKey
+        const unlocked = await PasswordService.checkAndRestoreSession();
+        if (!unlocked) {
+          // 未解锁，使用空文件夹列表
+          setFolders([]);
+          const [basicSettings] = await Promise.all([
+            SettingsService.getBasicSettings()
+          ]);
+          setSettings(basicSettings);
+          return;
+        }
+
+        // 获取 masterKey
+        const masterKey = await SessionService.getSessionKey();
+        if (!masterKey) {
+          setFolders([]);
+          const [basicSettings] = await Promise.all([
+            SettingsService.getBasicSettings()
+          ]);
+          setSettings(basicSettings);
+          return;
+        }
+
+        // 创建 FolderService 实例并设置 masterKey
+        const folderStorage = ChromeStorageAdapter.getFolderInstance();
+        const bookmarkStorage = ChromeStorageAdapter.getInstance();
+        const folderService = new FolderService(folderStorage, bookmarkStorage);
+        folderService.setMasterKey(masterKey);
+
+        // 并行加载设置和文件夹列表
+        const [basicSettings, folderResult] = await Promise.all([
+          SettingsService.getBasicSettings(),
+          folderService.getFolders()
+        ]);
+
+        setSettings(basicSettings);
+        if (folderResult.success && folderResult.data) {
+          setFolders(folderResult.data);
+        }
+      } catch (error) {
+        console.error('Failed to load basic settings:', error);
+        onMessage('加载设置失败', 'error');
+      }
+    };
+
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const [basicSettings] = await Promise.all([
-        SettingsService.getBasicSettings()
-      ]);
-
-      setSettings(basicSettings);
-
-      // TODO: 加载文件夹列表（需要解锁状态）
-      // 暂时使用模拟数据
-      setFolders([
-        { id: 'root', name: '根目录', sort: 0, createTime: Date.now() },
-        { id: 'work', name: '工作', sort: 1, createTime: Date.now() },
-        { id: 'personal', name: '个人', sort: 2, createTime: Date.now() }
-      ]);
-    } catch (error) {
-      console.error('Failed to load basic settings:', error);
-      onMessage('加载设置失败', 'error');
-    }
-  };
+  }, [onMessage]);
 
   const handleSave = async () => {
     if (!settings) return;

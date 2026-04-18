@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import type { ImportFormat, ImportStrategy } from "@/types/import-export";
 import { FORMAT_CONFIG } from "@/types/import-export";
 import { ImportExportService } from "@/services";
@@ -28,6 +28,14 @@ const ImportSection: React.FC<ImportSectionProps> = ({
   const [progressStage, setProgressStage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingFileRef = useRef<File | null>(null);
+
+  // 同步 masterKey 状态
+  useEffect(() => {
+    if (masterKey) {
+      // masterKey 已同步，可以安全执行导入操作
+      console.debug("ImportSection: masterKey synchronized");
+    }
+  }, [masterKey]);
 
   /**
    * 读取文件内容
