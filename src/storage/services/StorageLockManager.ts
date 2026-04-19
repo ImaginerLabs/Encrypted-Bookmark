@@ -48,6 +48,7 @@ export class StorageLockManager {
     resolve: () => void;
     reject: (error: Error) => void;
     timestamp: number;
+    lockKey: string;
   }> = [];
 
   /**
@@ -203,18 +204,31 @@ export class StorageLockManager {
    * 等待锁释放
    */
   private async waitForLock(
-    _ownerId: string,
-    _operation: 'read' | 'write',
+    ownerId: string,
+    operation: 'read' | 'write',
     lockKey: string
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const startTime = Date.now();
+
+      // 添加到等待队列
+      const queueItem = {
+        ownerId,
+        operation,
+        lockKey,
+        resolve,
+        reject,
+        timestamp: Date.now(),
+      };
+      this.lockQueue.push(queueItem);
 
       const checkInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
 
         // 超时检查
         if (elapsed > STORAGE_LOCK_CONFIG.MAX_WAIT_TIME) {
+          // 从队列中移除
+          this.lockQueue = this.lockQueue.filter(item => item !== queueItem);
           clearInterval(checkInterval);
           reject(
             new StorageError(
@@ -226,6 +240,8 @@ export class StorageLockManager {
 
         // 检查锁是否释放
         if (!this.locks.has(lockKey)) {
+          // 从队列中移除（锁已可用，不需要再等待）
+          this.lockQueue = this.lockQueue.filter(item => item !== queueItem);
           clearInterval(checkInterval);
           resolve();
           return;
@@ -239,6 +255,8 @@ export class StorageLockManager {
           // 强制释放超时锁
           console.warn(`检测到超时锁，强制释放: ${lockKey}`);
           this.locks.delete(lockKey);
+          // 从队列中移除（锁已释放，不需要再等待）
+          this.lockQueue = this.lockQueue.filter(item => item !== queueItem);
           clearInterval(checkInterval);
           resolve();
           return;
@@ -268,20 +286,15 @@ export class StorageLockManager {
 
   /**
    * 处理等待队列
+   * 授予可用的锁
    */
   private processQueue(): void {
-    // 简化实现：清理过期队列项
-    const now = Date.now();
-    this.lockQueue = this.lockQueue.filter(item => {
-      const age = now - item.timestamp;
-      if (age > STORAGE_LOCK_CONFIG.MAX_WAIT_TIME) {
-        item.reject(new StorageError('锁等待超时'));
-        return false;
+    for (const item of this.lockQueue) {
+      if (!this.locks.has(item.lockKey)) {
+        this.lockQueue = this.lockQueue.filter(i => i !== item);
+        item.resolve();
       }
-      return true;
-    });
-    
-    // 注意: ownerId 和 operation 参数已移除，因为简化实现不需要
+    }
   }
 
   /**

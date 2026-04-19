@@ -1,5 +1,7 @@
 import type { IStorageAdapter } from '@/storage/interfaces/IStorageAdapter';
 import { EncryptionService } from './EncryptionService';
+import { globalLockManager } from '@/storage';
+import type { StorageLockManager } from '@/storage/services/StorageLockManager';
 import type { Tag } from '@/types/data';
 import type {
   AddTagInput,
@@ -34,12 +36,19 @@ export class TagService {
   private tagStorage: IStorageAdapter;
   /** 存储适配器 - 书签数据（用于关联操作） */
   private bookmarkStorage: IStorageAdapter;
+  /** 锁管理器 */
+  private lockManager: StorageLockManager;
   /** 当前解锁的主密钥 */
   private masterKey: string | null = null;
 
-  constructor(tagStorage: IStorageAdapter, bookmarkStorage: IStorageAdapter) {
+  constructor(
+    tagStorage: IStorageAdapter,
+    bookmarkStorage: IStorageAdapter,
+    lockManager: StorageLockManager = globalLockManager
+  ) {
     this.tagStorage = tagStorage;
     this.bookmarkStorage = bookmarkStorage;
+    this.lockManager = lockManager;
   }
 
   /**
@@ -251,48 +260,83 @@ export class TagService {
    * 删除标签（从所有书签移除）
    */
   async deleteTag(id: string): Promise<Result<{ affectedBookmarks: number }>> {
-    try {
-      const tags = await this.readTags();
-      const tagIndex = tags.findIndex(t => t.id === id);
+    // 使用锁保护整个删除流程，确保原子性
+    return this.lockManager.withLock(
+      this.tagStorage,
+      async () => {
+        try {
+          const tags = await this.readTags();
+          const tagIndex = tags.findIndex(t => t.id === id);
 
-      if (tagIndex === -1) {
-        return {
-          success: false,
-          error: '标签不存在'
-        };
-      }
+          if (tagIndex === -1) {
+            return {
+              success: false,
+              error: '标签不存在'
+            };
+          }
 
-      // 从所有书签中移除该标签
-      const bookmarks = await this.readBookmarks();
-      let affectedCount = 0;
+          // 从所有书签中移除该标签
+          const bookmarks = await this.readBookmarks();
+          const affectedBookmarks = bookmarks.filter(
+            b => b.tags && b.tags.includes(id)
+          );
 
-      bookmarks.forEach(bookmark => {
-        if (bookmark.tags && bookmark.tags.includes(id)) {
-          bookmark.tags = bookmark.tags.filter(tagId => tagId !== id);
-          bookmark.updateTime = Date.now();
-          affectedCount++;
+          // 备份所有书签原始数据（用于回滚）
+          const originalBookmarks = bookmarks.map(b => ({ ...b }));
+
+          let affectedCount = 0;
+
+          try {
+            // 修改书签，移除该标签
+            bookmarks.forEach(bookmark => {
+              if (bookmark.tags && bookmark.tags.includes(id)) {
+                bookmark.tags = bookmark.tags.filter(tagId => tagId !== id);
+                bookmark.updateTime = Date.now();
+                affectedCount++;
+              }
+            });
+
+            // 保存书签（如果失败会抛异常）
+            if (affectedCount > 0) {
+              await this.writeBookmarks(bookmarks);
+            }
+
+            // 删除标签
+            tags.splice(tagIndex, 1);
+            await this.writeTags(tags);
+
+            return {
+              success: true,
+              data: { affectedBookmarks: affectedCount }
+            };
+          } catch (saveError) {
+            // === 回滚机制 ===
+            // 恢复书签的原始数据
+            affectedBookmarks.forEach((bookmark, index) => {
+              Object.assign(bookmark, originalBookmarks[index]);
+            });
+
+            // 尝试回滚书签数据
+            try {
+              await this.writeBookmarks(bookmarks);
+            } catch (rollbackError) {
+              console.error('回滚失败:', rollbackError);
+            }
+
+            return {
+              success: false,
+              error: `删除标签失败: ${saveError instanceof Error ? saveError.message : '未知错误'}`
+            };
+          }
+        } catch (error) {
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : '删除标签失败'
+          };
         }
-      });
-
-      // 保存书签
-      if (affectedCount > 0) {
-        await this.writeBookmarks(bookmarks);
-      }
-
-      // 删除标签
-      tags.splice(tagIndex, 1);
-      await this.writeTags(tags);
-
-      return {
-        success: true,
-        data: { affectedBookmarks: affectedCount }
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : '删除标签失败'
-      };
-    }
+      },
+      'write'
+    );
   }
 
   /**
