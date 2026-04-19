@@ -5,10 +5,12 @@ import {
   AccountLockedError,
   StorageError,
   PasswordError,
+  DataCorruptionError,
 } from "@/types";
 import { EncryptionService } from "./EncryptionService";
 import { SessionService } from "./SessionService";
 import { LockService } from "./LockService";
+import { ChromeStorageAdapter } from "@/storage";
 
 /**
  * 密码管理服务
@@ -324,32 +326,115 @@ export class PasswordService {
    * 修改主密码
    * @param oldPassword 旧密码
    * @param newPassword 新密码
+   * @param onProgress 进度回调函数 (step: string, progress: number) => void
    * @throws {InvalidPasswordError} 旧密码错误
    * @throws {WeakPasswordError} 新密码强度不足
+   * @throws {DataCorruptionError} 数据解密失败
    */
   static async changeMasterPassword(
     oldPassword: string,
     newPassword: string,
+    onProgress?: (step: string, progress: number) => void,
   ): Promise<void> {
     // 验证旧密码
+    onProgress?.("验证旧密码", 0);
     await this.verifyMasterPassword(oldPassword);
 
     // 验证新密码强度
     this.validatePasswordStrength(newPassword);
 
+    // 获取存储适配器
+    const bookmarkAdapter = ChromeStorageAdapter.getInstance();
+    const folderAdapter = ChromeStorageAdapter.getFolderInstance();
+    const tagAdapter = ChromeStorageAdapter.getTagInstance();
+
+    // 读取所有加密数据
+    onProgress?.("读取加密数据", 10);
+    const [encryptedBookmarks, encryptedFolders, encryptedTags] = await Promise.all([
+      bookmarkAdapter.read(),
+      folderAdapter.read(),
+      tagAdapter.read(),
+    ]);
+
+    // 如果没有任何数据，直接更新密码哈希即可
+    if (!encryptedBookmarks && !encryptedFolders && !encryptedTags) {
+      onProgress?.("更新密码哈希", 100);
+      const newPasswordHash = await EncryptionService.hashPassword(newPassword);
+      await this.setStorageData({ passwordHash: newPasswordHash });
+      this.masterKey = newPassword;
+      return;
+    }
+
+    // 解密所有数据（使用旧密码）
+    onProgress?.("解密现有数据", 20);
+
+    let bookmarksJson = "";
+    let foldersJson = "";
+    let tagsJson = "";
+
+    // 解密书签
+    if (encryptedBookmarks) {
+      try {
+        bookmarksJson = await EncryptionService.decrypt(encryptedBookmarks, oldPassword);
+      } catch {
+        throw new DataCorruptionError("书签数据解密失败，旧密码可能不正确");
+      }
+    }
+
+    // 解密文件夹
+    if (encryptedFolders) {
+      try {
+        foldersJson = await EncryptionService.decrypt(encryptedFolders, oldPassword);
+      } catch {
+        throw new DataCorruptionError("文件夹数据解密失败，旧密码可能不正确");
+      }
+    }
+
+    // 解密标签
+    if (encryptedTags) {
+      try {
+        tagsJson = await EncryptionService.decrypt(encryptedTags, oldPassword);
+      } catch {
+        throw new DataCorruptionError("标签数据解密失败，旧密码可能不正确");
+      }
+    }
+
+    // 重新加密所有数据（使用新密码）
+    onProgress?.("重新加密数据", 50);
+    const [newEncryptedBookmarks, newEncryptedFolders, newEncryptedTags] = await Promise.all([
+      encryptedBookmarks ? EncryptionService.encrypt(bookmarksJson, newPassword) : Promise.resolve(null),
+      encryptedFolders ? EncryptionService.encrypt(foldersJson, newPassword) : Promise.resolve(null),
+      encryptedTags ? EncryptionService.encrypt(tagsJson, newPassword) : Promise.resolve(null),
+    ]);
+
     // 计算新密码哈希
+    onProgress?.("更新密码哈希", 80);
     const newPasswordHash = await EncryptionService.hashPassword(newPassword);
 
-    // 更新存储
-    await this.setStorageData({
-      passwordHash: newPasswordHash,
-    });
+    // 先写入所有加密数据（使用新密码）
+    // 只有所有数据都成功写入后，才更新密码哈希
+    // 这样可以确保：如果写入失败，旧的密码哈希仍然有效
+    onProgress?.("保存加密数据", 90);
+    await Promise.all([
+      newEncryptedBookmarks ? bookmarkAdapter.write(newEncryptedBookmarks) : Promise.resolve(),
+      newEncryptedFolders ? folderAdapter.write(newEncryptedFolders) : Promise.resolve(),
+      newEncryptedTags ? tagAdapter.write(newEncryptedTags) : Promise.resolve(),
+    ]);
+
+    // 更新密码哈希（只有在数据写入成功后）
+    await this.setStorageData({ passwordHash: newPasswordHash });
 
     // 更新内存中的密钥
     this.masterKey = newPassword;
 
-    // TODO: 这里需要重新加密所有数据（使用新密码）
-    // 在后续 Task 中实现数据迁移逻辑
+    // 同步更新 SessionService
+    try {
+      await SessionService.markUnlocked(newPassword);
+    } catch {
+      /* 忽略 SessionService 同步错误 */
+    }
+
+    onProgress?.("完成", 100);
   }
 
   /**
