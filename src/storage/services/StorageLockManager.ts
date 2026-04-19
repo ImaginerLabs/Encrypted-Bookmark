@@ -268,20 +268,15 @@ export class StorageLockManager {
 
   /**
    * 处理等待队列
+   * 授予可用的锁
    */
   private processQueue(): void {
-    // 简化实现：清理过期队列项
-    const now = Date.now();
-    this.lockQueue = this.lockQueue.filter(item => {
-      const age = now - item.timestamp;
-      if (age > STORAGE_LOCK_CONFIG.MAX_WAIT_TIME) {
-        item.reject(new StorageError('锁等待超时'));
-        return false;
+    for (const item of this.lockQueue) {
+      if (!this.locks.has(item.lockKey)) {
+        this.lockQueue = this.lockQueue.filter(i => i !== item);
+        item.resolve();
       }
-      return true;
-    });
-    
-    // 注意: ownerId 和 operation 参数已移除，因为简化实现不需要
+    }
   }
 
   /**

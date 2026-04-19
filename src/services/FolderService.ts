@@ -296,7 +296,7 @@ export class FolderService {
           // === 事务性操作:先迁移书签,再删除文件夹 ===
 
           // 1. 备份完整书签数据(用于回滚)
-          const originalBookmarks = affectedBookmarks.map(b => ({ ...b }));
+          const originalBookmarks = bookmarks.map(b => ({ ...b }));
 
           try {
             // 2. 迁移书签至"未分类"
