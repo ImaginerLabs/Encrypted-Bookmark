@@ -15,20 +15,6 @@ const VALID_HTML = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
     <DT><A HREF="https://github.com" ADD_DATE="1700000002">GitHub</A>
 </DL><p>`;
 
-const NESTED_HTML = `<!DOCTYPE NETSCAPE-Bookmark-file-1>
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-<TITLE>Bookmarks</TITLE>
-<H1>Bookmarks</H1>
-<DL><p>
-    <DT><H3 ADD_DATE="1700000000">Parent Folder</H3>
-    <DL><p>
-        <DT><H3 ADD_DATE="1700000001">Child Folder</H3>
-        <DL><p>
-            <DT><A HREF="https://nested.com" ADD_DATE="1700000002">Nested</A>
-        </DL><p>
-    </DL><p>
-</DL><p>`;
-
 describe("HtmlParser", () => {
   describe("parse", () => {
     it("应能解析标准 Netscape 书签格式并返回结果", () => {

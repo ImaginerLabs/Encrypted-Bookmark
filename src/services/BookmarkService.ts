@@ -28,7 +28,7 @@ export class BookmarkService {
   /** 当前解锁的主密钥 */
   private masterKey: string | null = null;
   /** 待删除书签的定时器映射 */
-  private deleteTimers: Map<string, number> = new Map();
+  private deleteTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   constructor(storage: IStorageAdapter) {
     this.storage = storage;

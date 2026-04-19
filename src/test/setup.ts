@@ -2,7 +2,7 @@
  * Vitest 全局 Setup 文件
  * 在每个测试文件执行前自动运行
  */
-import { beforeAll, beforeEach, afterEach } from "vitest";
+import { beforeEach } from "vitest";
 import "@testing-library/jest-dom";
 import { installChromeMock, resetChromeMock } from "./mocks/chrome";
 import { ensureCryptoAvailable } from "./mocks/crypto";

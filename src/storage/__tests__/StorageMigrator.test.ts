@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StorageMigrator } from "@/storage/services/StorageMigrator";
 import type { IStorageAdapter } from "@/storage/interfaces/IStorageAdapter";
 import type { EncryptedData } from "@/types/data";
