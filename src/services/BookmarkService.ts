@@ -1,5 +1,5 @@
 import type { IStorageAdapter } from "@/storage/interfaces/IStorageAdapter";
-import { EncryptionService } from "./EncryptionService";
+import { EncryptedDataService } from "./EncryptedDataService";
 import type { Bookmark } from "@/types/data";
 import type {
   BookmarkWithDeletion,
@@ -16,71 +16,35 @@ import {
   DEFAULT_FOLDER_ID,
   UNDO_TIMEOUT_MS,
 } from "@/types/bookmark";
-import { StorageError, DataCorruptionError } from "@/types/errors";
 
 /**
  * 书签服务
  * 负责书签的增删改查、URL校验、撤销删除等核心业务
  */
-export class BookmarkService {
-  /** 存储适配器 */
-  private storage: IStorageAdapter;
-  /** 当前解锁的主密钥 */
-  private masterKey: string | null = null;
+export class BookmarkService extends EncryptedDataService {
   /** 待删除书签的定时器映射 */
   private deleteTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
   constructor(storage: IStorageAdapter) {
-    this.storage = storage;
+    super(storage);
   }
 
   /**
-   * 设置主密钥（由 PasswordService 提供）
+   * 清除主密钥（重写以清理定时器）
    */
-  setMasterKey(key: string): void {
-    this.masterKey = key;
-  }
-
-  /**
-   * 清除主密钥
-   */
-  clearMasterKey(): void {
-    this.masterKey = null;
+  override clearMasterKey(): void {
+    super.clearMasterKey();
     // 清除所有删除定时器
     this.deleteTimers.forEach((timer) => clearTimeout(timer));
     this.deleteTimers.clear();
   }
 
   /**
-   * 检查是否已解锁
-   */
-  private ensureUnlocked(): void {
-    if (!this.masterKey) {
-      throw new StorageError("应用未解锁，请先输入密码");
-    }
-  }
-
-  /**
    * 读取所有书签
    */
   private async readBookmarks(): Promise<BookmarkWithDeletion[]> {
-    this.ensureUnlocked();
-
-    const encryptedData = await this.storage.read();
-    if (!encryptedData) {
-      return [];
-    }
-
-    try {
-      const decrypted = await EncryptionService.decrypt(
-        encryptedData,
-        this.masterKey!,
-      );
-      const bookmarks = JSON.parse(decrypted) as BookmarkWithDeletion[];
-      return Array.isArray(bookmarks) ? bookmarks : [];
-    } catch (error) {
-      throw new DataCorruptionError("书签数据解密失败", error);
-    }
+    const bookmarks = await this.readEncrypted<BookmarkWithDeletion>();
+    return bookmarks;
   }
 
   /**
@@ -89,14 +53,7 @@ export class BookmarkService {
   private async writeBookmarks(
     bookmarks: BookmarkWithDeletion[],
   ): Promise<void> {
-    this.ensureUnlocked();
-
-    const plaintext = JSON.stringify(bookmarks);
-    const encrypted = await EncryptionService.encrypt(
-      plaintext,
-      this.masterKey!,
-    );
-    await this.storage.write(encrypted);
+    await this.writeEncrypted(bookmarks);
   }
 
   /**
@@ -139,35 +96,6 @@ export class BookmarkService {
       };
     }
     return null;
-  }
-
-  /**
-   * HTML转义（XSS防护）
-   */
-  private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#039;",
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
-  }
-
-  /**
-   * 生成UUID v4
-   */
-  private generateUuid(): string {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // Fallback for older browsers
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
   }
 
   /**

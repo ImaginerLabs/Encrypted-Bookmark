@@ -1,5 +1,5 @@
 import type { IStorageAdapter } from '@/storage/interfaces/IStorageAdapter';
-import { EncryptionService } from './EncryptionService';
+import { EncryptedDataService } from './EncryptedDataService';
 import { globalLockManager } from '@/storage';
 import type { StorageLockManager } from '@/storage/services/StorageLockManager';
 import type { Tag } from '@/types/data';
@@ -13,155 +13,57 @@ import {
   MAX_TAG_NAME_LENGTH,
   MIN_TAG_NAME_LENGTH
 } from '@/types/bookmark';
-import { StorageError, DataCorruptionError } from '@/types/errors';
 import type { BookmarkWithDeletion } from '@/types/bookmark';
 
-// 导入颜色映射
-const TAG_COLORS: Record<TagColor, string> = {
-  red: '#F44336',
-  blue: '#2196F3',
-  green: '#4CAF50',
-  yellow: '#FFEB3B',
-  purple: '#9C27B0',
-  orange: '#FF9800',
-  pink: '#E91E63'
-};
+// 从 types 导入颜色映射（单一数据源）
+import { TAG_COLOR_MAP as COLORS } from '@/types/bookmark';
 
 /**
  * 标签服务
  * 负责标签的增删改查、颜色管理、书签关联等业务
  */
-export class TagService {
-  /** 存储适配器 - 标签数据 */
-  private tagStorage: IStorageAdapter;
+export class TagService extends EncryptedDataService {
   /** 存储适配器 - 书签数据（用于关联操作） */
   private bookmarkStorage: IStorageAdapter;
   /** 锁管理器 */
   private lockManager: StorageLockManager;
-  /** 当前解锁的主密钥 */
-  private masterKey: string | null = null;
 
   constructor(
     tagStorage: IStorageAdapter,
     bookmarkStorage: IStorageAdapter,
     lockManager: StorageLockManager = globalLockManager
   ) {
-    this.tagStorage = tagStorage;
+    super(tagStorage);
     this.bookmarkStorage = bookmarkStorage;
     this.lockManager = lockManager;
-  }
-
-  /**
-   * 设置主密钥
-   */
-  setMasterKey(key: string): void {
-    this.masterKey = key;
-  }
-
-  /**
-   * 清除主密钥
-   */
-  clearMasterKey(): void {
-    this.masterKey = null;
-  }
-
-  /**
-   * 检查是否已解锁
-   */
-  private ensureUnlocked(): void {
-    if (!this.masterKey) {
-      throw new StorageError('应用未解锁，请先输入密码');
-    }
   }
 
   /**
    * 读取所有标签
    */
   private async readTags(): Promise<Tag[]> {
-    this.ensureUnlocked();
-
-    const encryptedData = await this.tagStorage.read();
-    if (!encryptedData) {
-      return [];
-    }
-
-    try {
-      const decrypted = await EncryptionService.decrypt(encryptedData, this.masterKey!);
-      const tags = JSON.parse(decrypted) as Tag[];
-      return Array.isArray(tags) ? tags : [];
-    } catch (error) {
-      throw new DataCorruptionError('标签数据解密失败', error);
-    }
+    return this.readEncrypted<Tag>();
   }
 
   /**
    * 写入所有标签
    */
   private async writeTags(tags: Tag[]): Promise<void> {
-    this.ensureUnlocked();
-
-    const plaintext = JSON.stringify(tags);
-    const encrypted = await EncryptionService.encrypt(plaintext, this.masterKey!);
-    await this.tagStorage.write(encrypted);
+    await this.writeEncrypted(tags);
   }
 
   /**
    * 读取所有书签
    */
   private async readBookmarks(): Promise<BookmarkWithDeletion[]> {
-    this.ensureUnlocked();
-
-    const encryptedData = await this.bookmarkStorage.read();
-    if (!encryptedData) {
-      return [];
-    }
-
-    try {
-      const decrypted = await EncryptionService.decrypt(encryptedData, this.masterKey!);
-      const bookmarks = JSON.parse(decrypted) as BookmarkWithDeletion[];
-      return Array.isArray(bookmarks) ? bookmarks : [];
-    } catch (error) {
-      throw new DataCorruptionError('书签数据解密失败', error);
-    }
+    return this.readEncrypted<BookmarkWithDeletion>(this.bookmarkStorage);
   }
 
   /**
    * 写入所有书签
    */
   private async writeBookmarks(bookmarks: BookmarkWithDeletion[]): Promise<void> {
-    this.ensureUnlocked();
-
-    const plaintext = JSON.stringify(bookmarks);
-    const encrypted = await EncryptionService.encrypt(plaintext, this.masterKey!);
-    await this.bookmarkStorage.write(encrypted);
-  }
-
-  /**
-   * 生成UUID v4
-   */
-  private generateUuid(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
-
-  /**
-   * HTML转义
-   */
-  private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+    await this.writeEncrypted(bookmarks, this.bookmarkStorage);
   }
 
   /**
@@ -184,14 +86,14 @@ export class TagService {
    * 校验颜色值
    */
   private validateColor(color: string): boolean {
-    return Object.values(TAG_COLORS).includes(color);
+    return Object.values(COLORS).includes(color);
   }
 
   /**
    * 获取默认颜色
    */
   private getDefaultColor(): string {
-    return TAG_COLORS.blue;
+    return COLORS.blue;
   }
 
   /**
@@ -228,8 +130,8 @@ export class TagService {
 
       // 获取颜色值
       let color = this.getDefaultColor();
-      if (input.color && TAG_COLORS[input.color]) {
-        color = TAG_COLORS[input.color];
+      if (input.color && COLORS[input.color]) {
+        color = COLORS[input.color];
       }
 
       // 创建标签
@@ -262,7 +164,7 @@ export class TagService {
   async deleteTag(id: string): Promise<Result<{ affectedBookmarks: number }>> {
     // 使用锁保护整个删除流程，确保原子性
     return this.lockManager.withLock(
-      this.tagStorage,
+      this.storage,
       async () => {
         try {
           const tags = await this.readTags();
@@ -478,7 +380,7 @@ export class TagService {
         }
       } else {
         // 传入颜色名称
-        colorValue = TAG_COLORS[color as TagColor] || this.getDefaultColor();
+        colorValue = COLORS[color as TagColor] || this.getDefaultColor();
       }
 
       tags[index].color = colorValue;
@@ -610,7 +512,7 @@ export class TagService {
    * 获取可用的标签颜色列表
    */
   getAvailableColors(): Array<{ name: TagColor; hex: string }> {
-    return Object.entries(TAG_COLORS).map(([name, hex]) => ({
+    return Object.entries(COLORS).map(([name, hex]) => ({
       name: name as TagColor,
       hex
     }));

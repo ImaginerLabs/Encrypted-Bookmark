@@ -1,5 +1,5 @@
 import type { IStorageAdapter } from '@/storage/interfaces/IStorageAdapter';
-import { EncryptionService } from './EncryptionService';
+import { EncryptedDataService } from './EncryptedDataService';
 import { globalLockManager } from '@/storage';
 import type { StorageLockManager } from '@/storage/services/StorageLockManager';
 import type { Folder } from '@/types/data';
@@ -16,124 +16,66 @@ import {
   DEFAULT_FOLDER_ID,
   DEFAULT_FOLDER_NAME
 } from '@/types/bookmark';
-import { StorageError, DataCorruptionError } from '@/types/errors';
 import type { BookmarkWithDeletion } from '@/types/bookmark';
 
 /**
  * 文件夹服务
  * 负责文件夹的增删改查、书签级联迁移等业务
  */
-export class FolderService {
-  /** 存储适配器 - 文件夹数据 */
-  private folderStorage: IStorageAdapter;
+export class FolderService extends EncryptedDataService {
   /** 存储适配器 - 书签数据（用于级联操作） */
   private bookmarkStorage: IStorageAdapter;
   /** 锁管理器 */
   private lockManager: StorageLockManager;
-  /** 当前解锁的主密钥 */
-  private masterKey: string | null = null;
 
   constructor(
     folderStorage: IStorageAdapter,
     bookmarkStorage: IStorageAdapter,
     lockManager: StorageLockManager = globalLockManager
   ) {
-    this.folderStorage = folderStorage;
+    super(folderStorage);
     this.bookmarkStorage = bookmarkStorage;
     this.lockManager = lockManager;
-  }
-
-  /**
-   * 设置主密钥
-   */
-  setMasterKey(key: string): void {
-    this.masterKey = key;
-  }
-
-  /**
-   * 清除主密钥
-   */
-  clearMasterKey(): void {
-    this.masterKey = null;
-  }
-
-  /**
-   * 检查是否已解锁
-   */
-  private ensureUnlocked(): void {
-    if (!this.masterKey) {
-      throw new StorageError('应用未解锁，请先输入密码');
-    }
   }
 
   /**
    * 读取所有文件夹
    */
   private async readFolders(): Promise<FolderWithDefault[]> {
-    this.ensureUnlocked();
+    const folders = await this.readEncrypted<FolderWithDefault>();
 
-    const encryptedData = await this.folderStorage.read();
-    if (!encryptedData) {
-      // 初始化默认"未分类"文件夹
+    // 初始化或确保默认文件夹存在
+    if (folders.length === 0) {
       return [this.createDefaultFolder()];
     }
 
-    try {
-      const decrypted = await EncryptionService.decrypt(encryptedData, this.masterKey!);
-      const folders = JSON.parse(decrypted) as FolderWithDefault[];
-      
-      // 确保默认文件夹存在
-      const hasDefault = folders.some(f => f.id === DEFAULT_FOLDER_ID);
-      if (!hasDefault) {
-        folders.unshift(this.createDefaultFolder());
-      }
-      
-      return Array.isArray(folders) ? folders : [this.createDefaultFolder()];
-    } catch (error) {
-      throw new DataCorruptionError('文件夹数据解密失败', error);
+    const hasDefault = folders.some(f => f.id === DEFAULT_FOLDER_ID);
+    if (!hasDefault) {
+      folders.unshift(this.createDefaultFolder());
     }
+
+    return folders;
   }
 
   /**
    * 写入所有文件夹
    */
   private async writeFolders(folders: FolderWithDefault[]): Promise<void> {
-    this.ensureUnlocked();
-
-    const plaintext = JSON.stringify(folders);
-    const encrypted = await EncryptionService.encrypt(plaintext, this.masterKey!);
-    await this.folderStorage.write(encrypted);
+    await this.writeEncrypted(folders);
   }
 
   /**
    * 读取所有书签（用于级联操作）
    */
   private async readBookmarks(): Promise<BookmarkWithDeletion[]> {
-    this.ensureUnlocked();
-
-    const encryptedData = await this.bookmarkStorage.read();
-    if (!encryptedData) {
-      return [];
-    }
-
-    try {
-      const decrypted = await EncryptionService.decrypt(encryptedData, this.masterKey!);
-      const bookmarks = JSON.parse(decrypted) as BookmarkWithDeletion[];
-      return Array.isArray(bookmarks) ? bookmarks : [];
-    } catch (error) {
-      throw new DataCorruptionError('书签数据解密失败', error);
-    }
+    return this.readEncrypted<BookmarkWithDeletion>(this.bookmarkStorage);
   }
 
   /**
    * 写入所有书签
    */
   private async writeBookmarks(bookmarks: BookmarkWithDeletion[]): Promise<void> {
-    this.ensureUnlocked();
-
-    const plaintext = JSON.stringify(bookmarks);
-    const encrypted = await EncryptionService.encrypt(plaintext, this.masterKey!);
-    await this.bookmarkStorage.write(encrypted);
+    await this.writeEncrypted(bookmarks, this.bookmarkStorage);
   }
 
   /**
@@ -148,34 +90,6 @@ export class FolderService {
       createTime: Date.now(),
       isDefault: true
     };
-  }
-
-  /**
-   * 生成UUID v4
-   */
-  private generateUuid(): string {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
-
-  /**
-   * HTML转义
-   */
-  private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
   }
 
   /**
@@ -255,7 +169,7 @@ export class FolderService {
   async deleteFolder(id: string): Promise<Result<BatchOperationResult>> {
     // 使用锁保护整个删除流程，确保原子性
     return this.lockManager.withLock(
-      this.folderStorage,
+      this.storage,
       async () => {
         try {
           // 禁止删除默认文件夹

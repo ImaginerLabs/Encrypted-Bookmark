@@ -148,7 +148,7 @@ export const Popup: React.FC = () => {
         confirmText="确认删除"
         danger
         onConfirm={state.confirmDialog.onConfirm}
-        onCancel={state.handleCancelConfirm}
+        onCancel={state.hideConfirmDialog}
       />
 
       {/* Toast 提示 */}
