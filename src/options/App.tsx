@@ -5,6 +5,8 @@ import SecuritySettingsPanel from './components/SecuritySettingsPanel';
 import StorageSettingsPanel from './components/StorageSettingsPanel';
 import ImportExportPanel from './components/ImportExportPanel';
 import AboutPanel from './components/AboutPanel';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import '@/shared/components/ErrorBoundary.css';
 import './App.css';
 
 /**
@@ -42,23 +44,25 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="options-container">
-      {/* 侧边导航 */}
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+    <ErrorBoundary>
+      <div className="options-container">
+        {/* 侧边导航 */}
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* 主内容区 */}
-      <main className="options-content">
-        {/* 全局消息提示 */}
-        {message && (
-          <div className={`global-message message-${messageType}`}>
-            {message}
-          </div>
-        )}
+        {/* 主内容区 */}
+        <main className="options-content">
+          {/* 全局消息提示 */}
+          {message && (
+            <div className={`global-message message-${messageType}`}>
+              {message}
+            </div>
+          )}
 
-        {/* 渲染当前面板 */}
-        {renderActivePanel()}
-      </main>
-    </div>
+          {/* 渲染当前面板 */}
+          {renderActivePanel()}
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 };
 

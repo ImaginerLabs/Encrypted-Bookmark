@@ -15,6 +15,7 @@ interface QuickAddPanelProps {
   folders: Folder[];
   onClose: () => void;
   onSave: (data: AddBookmarkInput) => Promise<void>;
+  showToast: (message: string, type: "success" | "error" | "warning") => void;
 }
 
 export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
@@ -22,6 +23,7 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
   folders,
   onClose,
   onSave,
+  showToast,
 }) => {
   const { currentTab } = useCurrentTab();
 
@@ -98,38 +100,19 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
         isReadLater: isReadLater || undefined,
       });
 
-      // 成功提示
-      showToast("书签已保存");
-
-      // 重置并关闭
+      // onSave 内部已调用 showToast，成功后不做额外提示
       resetForm();
-      setTimeout(onClose, 1500);
+      setTimeout(onClose, 800);
     } catch (error) {
       console.error("保存书签失败:", error);
-      setErrors({
-        general: error instanceof Error ? error.message : "保存失败",
-      });
+      showToast(
+        error instanceof Error ? error.message : "保存失败",
+        "error",
+      );
     } finally {
       setSaving(false);
       isSubmittedRef.current = false;
     }
-  };
-
-  // Toast 提示
-  const showToast = (message: string) => {
-    const toast = document.createElement("div");
-    toast.className = "toast";
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add("show");
-    }, 10);
-
-    setTimeout(() => {
-      toast.classList.remove("show");
-      setTimeout(() => toast.remove(), 300);
-    }, 2000);
   };
 
   // 关闭面板
@@ -232,7 +215,6 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
               const newVal = !isReadLater;
               setIsReadLater(newVal);
               if (newVal) {
-                // 开启稍后再读时，清空文件夹选择
                 setFolderId("");
               }
             }}
@@ -241,11 +223,6 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
             <span className="toggle-thumb" />
           </button>
         </div>
-
-        {/* 通用错误 */}
-        {errors.general && (
-          <div className="quick-add-general-error">{errors.general}</div>
-        )}
 
         {/* 操作按钮 */}
         <div className="quick-add-actions">
@@ -263,7 +240,14 @@ export const QuickAddPanel: React.FC<QuickAddPanelProps> = ({
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? "保存中..." : "保存"}
+            {saving ? (
+              <span className="quick-add-btn-loading">
+                <span className="quick-add-spinner" />
+                保存中...
+              </span>
+            ) : (
+              "保存"
+            )}
           </button>
         </div>
       </div>

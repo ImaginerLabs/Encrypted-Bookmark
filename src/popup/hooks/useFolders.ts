@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Folder } from "@/types/data";
-import { FolderService } from "@/services/FolderService";
-import { ChromeStorageAdapter } from "@/storage/adapters/ChromeStorageAdapter";
+import { useServices } from "./useServices";
 
 /**
  * 文件夹数据管理 Hook
@@ -11,22 +10,12 @@ export const useFolders = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+  const { folderService } = useServices();
 
   const loadFolders = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
-      const folderStorage = ChromeStorageAdapter.getFolderInstance();
-      const bookmarkStorage = ChromeStorageAdapter.getInstance();
-      const folderService = new FolderService(folderStorage, bookmarkStorage);
-
-      const masterKey = sessionStorage.getItem("masterKey");
-      if (!masterKey) {
-        throw new Error("未解锁，请先输入密码");
-      }
-
-      folderService.setMasterKey(masterKey);
 
       const result = await folderService.getFolders();
 
@@ -42,7 +31,7 @@ export const useFolders = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [folderService]);
 
   useEffect(() => {
     void loadFolders();

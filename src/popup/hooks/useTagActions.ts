@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-import { TagService } from "@/services/TagService";
-import { ChromeStorageAdapter } from "@/storage/adapters/ChromeStorageAdapter";
+import { useServices } from "./useServices";
 import type { Result } from "@/types/bookmark";
 
 /**
@@ -8,22 +7,9 @@ import type { Result } from "@/types/bookmark";
  * 封装标签的删除操作
  */
 export const useTagActions = () => {
+  const { tagService } = useServices();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  /** 创建 TagService 实例 */
-  const createService = useCallback(() => {
-    const tagStorage = ChromeStorageAdapter.getTagInstance();
-    const bookmarkStorage = ChromeStorageAdapter.getInstance();
-    const service = new TagService(tagStorage, bookmarkStorage);
-
-    const masterKey = sessionStorage.getItem("masterKey");
-    if (!masterKey) {
-      throw new Error("未解锁，请先输入密码");
-    }
-    service.setMasterKey(masterKey);
-    return service;
-  }, []);
 
   /** 删除标签 */
   const deleteTag = useCallback(
@@ -31,8 +17,7 @@ export const useTagActions = () => {
       setLoading(true);
       setError(null);
       try {
-        const service = createService();
-        const result = await service.deleteTag(id);
+        const result = await tagService.deleteTag(id);
         if (!result.success) {
           setError(result.error || "删除标签失败");
         }
@@ -45,7 +30,7 @@ export const useTagActions = () => {
         setLoading(false);
       }
     },
-    [createService],
+    [tagService],
   );
 
   return {

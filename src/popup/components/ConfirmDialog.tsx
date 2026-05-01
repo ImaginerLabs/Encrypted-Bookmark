@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import "./ConfirmDialog.css";
 
 /**
@@ -19,8 +19,8 @@ interface ConfirmDialogProps {
   cancelText?: string;
   /** 是否为危险操作（红色确认按钮） */
   danger?: boolean;
-  /** 确认回调 */
-  onConfirm: () => void;
+  /** 确认回调（支持异步） */
+  onConfirm: () => Promise<void> | void;
   /** 取消回调 */
   onCancel: () => void;
 }
@@ -35,14 +35,29 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const [confirming, setConfirming] = useState(false);
+
+  // 处理确认操作，支持异步 + 防重复点击
+  const handleConfirm = useCallback(async () => {
+    if (confirming) return;
+    setConfirming(true);
+    try {
+      await onConfirm();
+    } catch {
+      // 错误由调用方处理
+    } finally {
+      setConfirming(false);
+    }
+  }, [confirming, onConfirm]);
+
   // Escape 键关闭
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !confirming) {
         onCancel();
       }
     },
-    [onCancel],
+    [onCancel, confirming],
   );
 
   useEffect(() => {
@@ -52,10 +67,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   }, [visible, handleKeyDown]);
 
+  // 弹窗关闭时重置 confirming 状态
+  useEffect(() => {
+    if (!visible) {
+      setConfirming(false);
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
-    <div className="confirm-dialog-overlay" onClick={onCancel}>
+    <div className="confirm-dialog-overlay" onClick={confirming ? undefined : onCancel}>
       <div
         className="confirm-dialog"
         onClick={(e) => e.stopPropagation()}
@@ -71,15 +93,24 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             className="confirm-dialog-btn confirm-dialog-btn-cancel"
             onClick={onCancel}
+            disabled={confirming}
           >
             {cancelText}
           </button>
           <button
             className={`confirm-dialog-btn confirm-dialog-btn-confirm ${danger ? "danger" : ""}`}
-            onClick={onConfirm}
+            onClick={handleConfirm}
+            disabled={confirming}
             autoFocus
           >
-            {confirmText}
+            {confirming ? (
+              <span className="confirm-dialog-btn-loading">
+                <span className="confirm-dialog-spinner" />
+                处理中...
+              </span>
+            ) : (
+              confirmText
+            )}
           </button>
         </div>
       </div>

@@ -95,7 +95,44 @@ export class PasswordService {
   }
 
   /**
-   * 检查账户锁定状态
+   * 检查账户锁定状态（公开方法，供 SessionService 等外部调用）
+   * @returns 锁定信息 { isLocked, lockedUntil, remainingSeconds }
+   */
+  static async checkLockStatusPublic(): Promise<{
+    isLocked: boolean;
+    lockedUntil: number;
+    remainingSeconds: number;
+  }> {
+    const status = await this.getPasswordStatus();
+    const now = Date.now();
+
+    if (status.lockedUntil > now) {
+      const remainingSeconds = Math.ceil((status.lockedUntil - now) / 1000);
+      return {
+        isLocked: true,
+        lockedUntil: status.lockedUntil,
+        remainingSeconds,
+      };
+    }
+
+    return {
+      isLocked: false,
+      lockedUntil: 0,
+      remainingSeconds: 0,
+    };
+  }
+
+  /**
+   * 获取剩余尝试次数
+   * @returns 剩余次数
+   */
+  static async getRemainingAttempts(): Promise<number> {
+    const status = await this.getPasswordStatus();
+    return Math.max(0, this.LOCK_THRESHOLD_2 - status.failedAttempts);
+  }
+
+  /**
+   * 检查账户锁定状态（内部使用，抛出异常）
    * @throws {AccountLockedError} 账户已锁定
    */
   private static async checkLockStatus(): Promise<void> {
@@ -301,6 +338,7 @@ export class PasswordService {
       const sessionKey = await SessionService.getSessionKey();
       if (sessionKey) {
         this.masterKey = sessionKey;
+
         return true;
       }
 
@@ -318,6 +356,7 @@ export class PasswordService {
    */
   static async lock(): Promise<void> {
     this.masterKey = null;
+
     // 同步更新 SessionService 会话状态为已锁定
     await SessionService.lock();
   }

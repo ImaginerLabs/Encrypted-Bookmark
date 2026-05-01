@@ -4,8 +4,7 @@ import { getFaviconUrl } from "@/utils/favicon";
 import { highlightText } from "@/utils/highlight";
 import { isValidUrl } from "@/utils/helpers";
 import { ContextMenu } from "./ContextMenu";
-import { TagService } from "@/services/TagService";
-import { ChromeStorageAdapter } from "@/storage/adapters/ChromeStorageAdapter";
+import { useServices } from "../hooks/useServices";
 import "./BookmarkItem.css";
 
 /**
@@ -29,12 +28,13 @@ export const clearTagCache = (): void => {
   tagCache.clear();
 };
 
-export const BookmarkItem: React.FC<BookmarkItemProps> = ({
+export const BookmarkItem = React.memo(function BookmarkItem({
   bookmark,
   searchKeyword,
   onEdit,
   onDelete,
-}) => {
+}: BookmarkItemProps) {
+  const { tagService } = useServices();
   const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({
     x: 0,
@@ -56,24 +56,18 @@ export const BookmarkItem: React.FC<BookmarkItemProps> = ({
         const uncachedIds = bookmark.tags.filter((id) => !tagCache.has(id));
 
         if (uncachedIds.length > 0) {
-          const storage = new ChromeStorageAdapter();
-          const tagService = new TagService(storage, storage);
-          const masterKey = sessionStorage.getItem("masterKey");
-          if (masterKey) {
-            tagService.setMasterKey(masterKey);
-            const result = await tagService.getTags();
-            if (result.success && result.data) {
-              result.data.forEach((tag) => {
-                // LRU-style eviction when cache is full
-                if (tagCache.size >= MAX_CACHE_SIZE) {
-                  const firstKey = tagCache.keys().next().value;
-                  if (firstKey !== undefined) {
-                    tagCache.delete(firstKey);
-                  }
+          const result = await tagService.getTags();
+          if (result.success && result.data) {
+            result.data.forEach((tag) => {
+              // LRU-style eviction when cache is full
+              if (tagCache.size >= MAX_CACHE_SIZE) {
+                const firstKey = tagCache.keys().next().value;
+                if (firstKey !== undefined) {
+                  tagCache.delete(firstKey);
                 }
-                tagCache.set(tag.id, tag);
-              });
-            }
+              }
+              tagCache.set(tag.id, tag);
+            });
           }
         }
 
@@ -88,7 +82,7 @@ export const BookmarkItem: React.FC<BookmarkItemProps> = ({
     };
 
     resolveTags();
-  }, [bookmark.tags]);
+  }, [bookmark.tags, tagService]);
 
   // 点击书签 - 在新标签页打开
   const handleClick = useCallback(() => {
@@ -196,4 +190,4 @@ export const BookmarkItem: React.FC<BookmarkItemProps> = ({
       )}
     </>
   );
-};
+});

@@ -178,6 +178,76 @@
   transform: translateX(-50%) translateY(0);
 }
 
+/* 侧边栏加载状态 */
+.sidebar-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.sidebar-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #E5E7EB;
+  border-top-color: #4F46E5;
+  border-radius: 50%;
+  animation: sidebarSpin 0.6s linear infinite;
+}
+
+@keyframes sidebarSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 共享 spinner 动画 - 其他组件可直接使用 animation: spin 0.6s linear infinite */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 书签加载错误状态 */
+.bookmark-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.bookmark-error-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.bookmark-error-message {
+  font-size: 14px;
+  color: #6B7280;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.bookmark-error-retry {
+  padding: 8px 20px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bookmark-error-retry:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+}
+
 /* 搜索高亮 */
 mark {
   background: #FDE68A;

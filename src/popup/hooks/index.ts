@@ -9,3 +9,5 @@ export { useTags } from "./useTags";
 export { useFolderActions } from "./useFolderActions";
 export { useTagActions } from "./useTagActions";
 export { useLockSettings } from "./useLockSettings";
+export { usePopupState } from "./usePopupState";
+export { useServices } from "./useServices";

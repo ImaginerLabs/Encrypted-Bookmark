@@ -28,7 +28,7 @@ interface FolderItemProps {
   onDelete?: (id: string) => void;
 }
 
-export const FolderItem: React.FC<FolderItemProps> = ({
+export const FolderItem = React.memo(function FolderItem({
   folder,
   isSelected,
   onClick,
@@ -37,7 +37,7 @@ export const FolderItem: React.FC<FolderItemProps> = ({
   isSystem,
   onRename,
   onDelete,
-}) => {
+}: FolderItemProps) {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({
@@ -143,4 +143,4 @@ export const FolderItem: React.FC<FolderItemProps> = ({
       )}
     </>
   );
-};
+});

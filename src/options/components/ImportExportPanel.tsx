@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { PasswordService } from "@/services";
-import { SessionService } from "@/services/SessionService";
 import { InvalidPasswordError, AccountLockedError } from "@/types";
 import ImportSection from "./ImportSection";
 import ExportSection from "./ExportSection";
@@ -20,13 +19,13 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
   const [unlockError, setUnlockError] = useState("");
   const [unlocking, setUnlocking] = useState(false);
 
-  // 获取 masterKey：优先通过 SessionService 检查会话状态，再从 chrome.storage.session 恢复
+  // 获取 masterKey：通过 PasswordService 恢复会话
   useEffect(() => {
     const restoreSession = async () => {
       const unlocked = await PasswordService.checkAndRestoreSession();
       if (unlocked) {
-        // 会话有效，从 SessionService 获取 masterKey
-        const key = await SessionService.getSessionKey();
+        // 会话有效，从 PasswordService 获取 masterKey（单一权威来源）
+        const key = PasswordService.getMasterKey();
         if (key) {
           setMasterKey(key);
         }
@@ -44,13 +43,12 @@ const ImportExportPanel: React.FC<ImportExportPanelProps> = ({ onMessage }) => {
     try {
       await PasswordService.verifyMasterPassword(unlockPassword);
       setUnlockPassword("");
-      // 同步到 sessionStorage
-      try {
-        sessionStorage.setItem("masterKey", unlockPassword);
-      } catch {
-        /* ignore */
+      // PasswordService.verifyMasterPassword 成功后已将密钥缓存到内存
+      // 通过 PasswordService.getMasterKey() 获取（单一权威来源）
+      const key = PasswordService.getMasterKey();
+      if (key) {
+        setMasterKey(key);
       }
-      setMasterKey(unlockPassword);
     } catch (err) {
       if (err instanceof InvalidPasswordError) {
         setUnlockError(`密码错误，剩余尝试次数：${err.remainingAttempts}`);

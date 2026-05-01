@@ -21,6 +21,12 @@ export default defineConfig({
         popup: "src/popup/index.html",
         options: "src/options/index.html",
       },
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom"],
+          crypto: ["./src/services/EncryptionService"],
+        },
+      },
     },
   },
 });

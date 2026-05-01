@@ -7,7 +7,10 @@ import {
   AccountLockedError,
 } from "@/types";
 import { Popup } from "./Popup";
+import { ServiceProvider } from "./context/ServiceContext";
 import { clearTagCache } from "./components/BookmarkItem";
+import { ErrorBoundary } from "@/shared/components/ErrorBoundary";
+import "@/shared/components/ErrorBoundary.css";
 import "./App.css";
 
 /**
@@ -21,6 +24,7 @@ const App: React.FC = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [masterKey, setMasterKey] = useState<string | null>(null);
 
   // 加载密码状态
   useEffect(() => {
@@ -41,6 +45,10 @@ const App: React.FC = () => {
   const checkUnlockStatus = async () => {
     const unlocked = await PasswordService.checkAndRestoreSession();
     setIsUnlocked(unlocked);
+    if (unlocked) {
+      const key = PasswordService.getMasterKey();
+      setMasterKey(key);
+    }
   };
 
   // 设置主密码
@@ -184,8 +192,14 @@ const App: React.FC = () => {
   }
 
   // 已解锁 → 渲染书签管理界面
-  if (isUnlocked) {
-    return <Popup />;
+  if (isUnlocked && masterKey) {
+    return (
+      <ServiceProvider masterKey={masterKey}>
+        <ErrorBoundary>
+          <Popup />
+        </ErrorBoundary>
+      </ServiceProvider>
+    );
   }
 
   // 需要解锁

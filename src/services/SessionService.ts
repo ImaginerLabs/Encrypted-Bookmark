@@ -1,20 +1,16 @@
 import type { SessionState, UnlockResult } from "@/types/auth";
-import { AuthService } from "./AuthService";
+import { PasswordService } from "./PasswordService";
 
 /**
  * 会话管理服务
- * 负责解锁/锁定状态管理和内存密钥存储
+ * 负责解锁/锁定状态管理
+ * 密钥管理已统一到 PasswordService（Single Source of Truth）
  */
 export class SessionService {
   /** 存储键: 会话状态 */
   private static readonly STORAGE_KEY_SESSION = "session_state";
   /** 存储键: 会话密钥（存储在 chrome.storage.session 中，跨页面持久化） */
   private static readonly STORAGE_KEY_SESSION_KEY = "session_key";
-
-  /** 内存中的加密密钥 (使用 WeakMap 提高安全性) */
-  private static encryptionKeyStore = new WeakMap<object, string>();
-  /** WeakMap 的引用对象 */
-  private static keyReference = {};
 
   /**
    * 获取当前会话状态
@@ -78,25 +74,18 @@ export class SessionService {
   static async unlock(password: string): Promise<UnlockResult> {
     try {
       // 1. 验证密码
-      const verifyResult = await AuthService.verifyPassword(password);
+      const isValid = await PasswordService.verifyMasterPassword(password);
 
-      if (!verifyResult.success) {
-        // 验证失败
-        const remainingAttempts = await AuthService.getRemainingAttempts();
-        const lockStatus = await AuthService.checkLockStatus();
-
+      if (!isValid) {
+        // 验证失败（verifyMasterPassword 成功返回时不会走到这里，
+        // 因为密码错误会抛出 InvalidPasswordError）
         return {
           success: false,
-          remainingAttempts,
-          lockedUntil: lockStatus.isLocked
-            ? Date.now() + lockStatus.remainingSeconds * 1000
-            : undefined,
-          error: verifyResult.error,
+          error: "密码错误",
         };
       }
 
-      // 2. 验证成功：存储密钥到内存
-      this.encryptionKeyStore.set(this.keyReference, password);
+      // 2. 验证成功：PasswordService 已缓存密钥，无需重复存储
 
       // 3. 更新会话状态为已解锁
       const now = Date.now();
@@ -109,11 +98,24 @@ export class SessionService {
       return {
         success: true,
       };
-    } catch (error) {
-      console.error("Failed to unlock session:", error);
+    } catch (error: unknown) {
+      // 处理 AccountLockedError
+      const lockStatus = await PasswordService.checkLockStatusPublic();
+      if (lockStatus.isLocked) {
+        return {
+          success: false,
+          remainingAttempts: await PasswordService.getRemainingAttempts(),
+          lockedUntil: lockStatus.lockedUntil,
+          error: error instanceof Error ? error.message : "账户已锁定",
+        };
+      }
+
+      // 处理 InvalidPasswordError
+      const remainingAttempts = await PasswordService.getRemainingAttempts();
       return {
         success: false,
-        error: "解锁失败",
+        remainingAttempts,
+        error: error instanceof Error ? error.message : "解锁失败",
       };
     }
   }
@@ -168,13 +170,10 @@ export class SessionService {
    */
   static async lock(): Promise<void> {
     try {
-      // 1. 清除内存中的加密密钥
-      this.clearEncryptionKey();
-
-      // 2. 清除 chrome.storage.session 中的会话密钥
+      // 1. 清除 chrome.storage.session 中的会话密钥
       await chrome.storage.session.remove(this.STORAGE_KEY_SESSION_KEY);
 
-      // 3. 更新会话状态为已锁定
+      // 2. 更新会话状态为已锁定
       await this.saveSessionState({
         isLocked: true,
         lastActivityTime: Date.now(),
@@ -188,18 +187,11 @@ export class SessionService {
 
   /**
    * 获取内存中的加密密钥
+   * 委托给 PasswordService.getMasterKey()（密钥管理已统一）
    * @returns 加密密钥 (已解锁) 或 null (未解锁)
    */
   static getEncryptionKey(): string | null {
-    return this.encryptionKeyStore.get(this.keyReference) || null;
-  }
-
-  /**
-   * 清除内存中的加密密钥
-   */
-  private static clearEncryptionKey(): void {
-    // 创建新的引用对象，旧的密钥会被垃圾回收
-    this.keyReference = {};
+    return PasswordService.getMasterKey();
   }
 
   /**

@@ -19,12 +19,12 @@ interface TagItemProps {
   onDelete?: (id: string) => void;
 }
 
-export const TagItem: React.FC<TagItemProps> = ({
+export const TagItem = React.memo(function TagItem({
   tag,
   isSelected,
   onClick,
   onDelete,
-}) => {
+}: TagItemProps) {
   const [showContextMenu, setShowContextMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({
     x: 0,
@@ -95,4 +95,4 @@ export const TagItem: React.FC<TagItemProps> = ({
       )}
     </>
   );
-};
+});
